@@ -567,3 +567,21 @@ body .task-need.task-hint { -webkit-line-clamp: 2; padding: 10px 12px; border-ra
 @media (min-width: 900px) { body .task-list > .task-row.level-priority:first-child { grid-column: span 2; } }
 body .task-row { align-content: start; grid-template-rows: auto 1fr; }
 body .task-need.task-hint { display: block; -webkit-line-clamp: unset; }
+
+/* ===== Главная: ценность для AI Sana; каталог: компактные фильтры (HAC-55) ===== */
+.value .section-head h2 { max-width: 28ch; }
+.value .section-head h2 em { font-style: normal; color: var(--accent); }
+.value-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.value-card { position: relative; display: grid; gap: 10px; align-content: start; padding: 26px 26px 28px; border-radius: var(--r-l); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; transition: transform .3s var(--spring), box-shadow .3s; }
+.value-card::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--accent); transform: scaleX(.25); transform-origin: left; transition: transform .5s var(--ease); }
+.value-card:hover { transform: translateY(-4px); box-shadow: inset 0 0 0 1px var(--line), 0 20px 44px var(--glow); }
+.value-card:hover::before { transform: scaleX(1); }
+.value-num { font: 600 44px/1 var(--mono); color: var(--accent); letter-spacing: -.03em; }
+.value-num small { font-size: 16px; color: var(--muted); }
+.value-card strong { font: 700 16px/1.3 var(--display); }
+.value-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+body form.filters { display: inline-flex; width: auto; max-width: 100%; vertical-align: top; margin: 0 14px 14px 0; align-items: flex-end; }
+body .lead { max-width: 62ch; line-height: 1.6; }
+.value-num { font: 600 13px/1 var(--mono); text-transform: uppercase; letter-spacing: .12em; }
+.value-card strong { font-size: 19px; line-height: 1.25; }
