@@ -204,7 +204,8 @@ list_teams() · get_team(id) · add_proposal(p) · get_proposal(id) · update_pr
 | Метод и путь | Что делает |
 | --- | --- |
 | `GET /` | Вход: «Разместить задачу» и «Каталог задач» |
-| `GET /business/new` · `POST /business/new` (text, industry) | Черновик → `generate_questions` → страница вопросов |
+| `GET /business/new` · `POST /business/new` (text, industry) | Черновик → `generate_questions` → **303 на `GET /business/drafts/{id}`** |
+| `GET /business/drafts/{id}` | Страница уточняющих вопросов. Появился в HAC-20: `POST /business/new` раньше рендерил её напрямую, теперь ведёт сюда редиректом, чтобы F5 не плодил черновики (post/redirect/get) |
 | `POST /business/drafts/{id}/answers` (answer_0..n) | `build_card` → карточка сохраняется → redirect на редактор |
 | `GET /business/cards/{id}/edit` · `POST /business/cards/{id}/edit` | Редактируемая карточка + панель рейтинга; сохранение = пересчёт |
 | `POST /business/cards/{id}/publish` (confirmed=on) | Подтверждение и публикация |
@@ -212,7 +213,7 @@ list_teams() · get_team(id) · add_proposal(p) · get_proposal(id) · update_pr
 | `GET /tasks/{id}` | Карточка, рейтинг, отклики, форма отклика (team_id, idea, plan, deadline, link), кнопки бизнеса |
 | `POST /tasks/{id}/proposals` | Новый отклик, статус pending |
 | `POST /proposals/{id}/decision` (decision=accept/reject) | Ручное решение бизнеса |
-| `GET /health` | `{"status":"ok","ai_mode":...}` |
+| `GET /health` | `status`, `ai_mode`, `ai_fallback`, счётчики `cards_total`/`cards_published`/`teams`/`proposals`/`drafts`, `store`, `version` (расширен в HAC-35) |
 
 ### Подтверждение и рейтинг (уточнено 13:50)
 
