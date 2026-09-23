@@ -11,11 +11,18 @@
 """
 
 import logging
+import re
 
 from app.config import settings
 from app.llm import LLMConfigError, LLMResponseError, get_client, llm_available
 from app.models import CARD_FIELDS, FIELD_LABELS, Answer, CardFields, Question
-from app.prompts import QUESTIONS_SYSTEM, QuestionsResponse, build_questions_user_prompt
+from app.prompts import (
+    CARD_SYSTEM,
+    QUESTIONS_SYSTEM,
+    QuestionsResponse,
+    build_card_user_prompt,
+    build_questions_user_prompt,
+)
 from app.rating import SCALE, compute_rating
 
 logger = logging.getLogger(__name__)
@@ -40,6 +47,10 @@ _MIN_QUESTIONS = 3
 _MAX_QUESTIONS = 6
 _FIELD_ENOUGH_LEN = 15  # поле уже достаточно раскрыто в черновике — не переспрашиваем
 
+_WORD_RE = re.compile(r"[а-яёa-z]+", re.IGNORECASE)
+_TOKEN_RE = re.compile(r"[\w.@+-]{3,}")
+_STEM_LEN = 5  # длина "корня" слова для нестрогого сопоставления словоформ
+
 
 def ai_mode() -> str:
     return settings.LLM_PROVIDER if llm_available() else "stub"
@@ -61,12 +72,69 @@ def generate_questions(draft_text: str, industry: str) -> list[Question]:
 
 
 def build_card(draft_text: str, industry: str, answers: list[Answer]) -> CardFields:
-    """Заглушка: черновик идёт в контекст, ответы раскладываются по своим полям как есть."""
-    fields: dict[str, str] = {"context": draft_text.strip(), "title": draft_text.strip().split("\n")[0][:80]}
+    stub = _stub_card(draft_text, answers)
+    if llm_available():
+        try:
+            return _llm_card(draft_text, industry, answers, stub)
+        except (LLMConfigError, LLMResponseError) as exc:
+            logger.warning("LLM недоступен для сборки карточки, использую заглушку: %s", exc)
+    return stub
+
+
+def _stub_card(draft_text: str, answers: list[Answer]) -> CardFields:
+    """Черновик идёт в контекст, ответы раскладываются по своим полям как есть."""
+    draft = draft_text.strip()
+    fields: dict[str, str] = {"context": draft, "title": draft.split("\n")[0][:80]}
     for a in answers:
-        if a.field in FIELD_LABELS and a.answer.strip():
-            fields[a.field] = a.answer.strip()
+        answer_text = a.answer.strip()
+        if a.field not in FIELD_LABELS or not answer_text:
+            continue
+        if a.field == "context":
+            fields["context"] = f"{fields['context']}\n{answer_text}".strip()
+        else:
+            fields[a.field] = answer_text
     return CardFields(**fields)
+
+
+def _llm_card(draft_text: str, industry: str, answers: list[Answer], stub: CardFields) -> CardFields:
+    user_prompt = build_card_user_prompt(draft_text, industry, answers)
+    client = get_client()
+    result: CardFields = client.complete(
+        [
+            {"role": "system", "content": CARD_SYSTEM},
+            {"role": "user", "content": user_prompt},
+        ],
+        json_schema=CardFields,
+    )
+    source_text = draft_text + "\n" + "\n".join(a.answer for a in answers)
+    fields: dict[str, str] = {}
+    for field in CARD_FIELDS:
+        value = getattr(result, field, "").strip()
+        if value and not _field_is_grounded(value, source_text):
+            logger.warning("Поле %r из LLM не подтверждается входом, заменено заглушкой: %r", field, value)
+            value = getattr(stub, field, "")
+        fields[field] = value
+    return CardFields(**fields)
+
+
+def _field_is_grounded(value: str, source_text: str) -> bool:
+    """Защита от выдуманных фактов: значение поля должно опираться на исходный текст.
+
+    Слова длиной >= _STEM_LEN сверяются по первым _STEM_LEN символам (без регистра),
+    чтобы не спотыкаться о словоформы. Нужна половина совпадений. Если длинных слов
+    нет (например, контакт или короткое значение), сверяем короткие токены целиком —
+    иначе выдуманный e-mail без длинных слов проходил бы проверку автоматически.
+    """
+    long_words = [w for w in _WORD_RE.findall(value) if len(w) >= _STEM_LEN]
+    if long_words:
+        source_stems = {w[:_STEM_LEN].lower() for w in _WORD_RE.findall(source_text) if len(w) >= _STEM_LEN}
+        matched = sum(1 for w in long_words if w[:_STEM_LEN].lower() in source_stems)
+        return matched * 2 >= len(long_words)
+    tokens = _TOKEN_RE.findall(value)
+    if not tokens:
+        return True
+    source_lower = source_text.lower()
+    return any(token.lower() in source_lower for token in tokens)
 
 
 def _llm_questions(draft_text: str, industry: str, card: CardFields) -> list[Question] | None:
