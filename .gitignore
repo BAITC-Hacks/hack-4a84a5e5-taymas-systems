@@ -11,3 +11,6 @@ node_modules/
 dist/
 build/
 *.egg-info/
+
+# runtime-состояние приложения; исходные данные — data/seed.json
+data/store.json

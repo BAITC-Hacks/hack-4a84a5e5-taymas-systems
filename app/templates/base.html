@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AI Sana Challenge Hub{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">AI Sana Challenge Hub</a>
+    <nav>
+      <a href="/business/new">Разместить задачу</a>
+      <a href="/catalog">Каталог задач</a>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">TayMas Systems · HackAlem AI 2026 · режим ИИ: {{ ai_mode }}</footer>
+</body>
+</html>

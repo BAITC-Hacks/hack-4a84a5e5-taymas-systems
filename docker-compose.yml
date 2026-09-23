@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    env_file:
+      - path: .env
+        required: false   # без .env приложение работает в режиме локальной заглушки ИИ
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
