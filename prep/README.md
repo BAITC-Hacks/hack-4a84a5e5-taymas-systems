@@ -14,6 +14,7 @@
 
 | Файл | Назначение |
 | --- | --- |
+| `SETUP.md` | Чеклист настройки машины участника. Даётся агенту на чужой машине словами «прочитай и сделай» |
 | `templates/Dockerfile` | Лёгкий образ на Python, версии зафиксированы |
 | `templates/docker-compose.yml` | Запуск одной командой |
 | `templates/Makefile` | `make run` и `make check` |
