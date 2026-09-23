@@ -19,7 +19,7 @@
 </p>
 
 {% if change %}
-<p class="notice info change-note">Предварительный рейтинг пересчитан: было {{ change.before }} → стало {{ change.after }}. {{ message }}</p>
+<p class="notice info change-note"><span class="agent-chip">пересчёт</span> Предварительный рейтинг пересчитан: было {{ change.before }} → стало {{ change.after }}. {{ message }}</p>
 {% elif message %}<p class="notice info">{{ message }}</p>{% endif %}
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
 {% if card.answers and not published and not change %}
@@ -88,7 +88,9 @@
   </div>
 
   <aside class="side">
-    <section class="gauge-card" id="gauge-card">
+    {% set lv = namespace(before=0, after=0) %}
+    {% if change %}{% for t in [40, 70, 90] %}{% if change.before >= t %}{% set lv.before = lv.before + 1 %}{% endif %}{% if change.after >= t %}{% set lv.after = lv.after + 1 %}{% endif %}{% endfor %}{% endif %}
+    <section class="gauge-card" id="gauge-card"{% if lv.after > lv.before %} data-levelup="{{ rating.level_label }}"{% endif %}>
       <div class="gauge-top">
         <span class="k">Предварительный балл</span>
         <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>

@@ -8,7 +8,7 @@
 <blockquote class="draft-quote"><span class="muted">Черновик: {{ draft.industry }}</span>{{ draft.text }}</blockquote>
 <p class="lede">На любой вопрос можно не отвечать — недостающее потом дополните в редакторе карточки. <span class="answered-live" data-total="{{ draft.questions|length }}">Отвечено <b>0</b> из {{ draft.questions|length }}</span></p>
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-<form method="post" action="/business/drafts/{{ draft.id }}/answers" class="form-stack q-form">
+<form method="post" action="/business/drafts/{{ draft.id }}/answers" class="form-stack q-form" data-agent="Читаю ответы|Раскладываю сведения по полям карточки|Считаю рейтинг готовности|Готовлю карточку к проверке">
   {% for question in draft.questions %}
   <fieldset class="q-card" style="--i:{{ loop.index0 }}">
     <legend><span class="q-num">{{ loop.index }}</span>{{ question.question }}</legend>

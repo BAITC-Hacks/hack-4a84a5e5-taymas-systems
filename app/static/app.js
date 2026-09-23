@@ -210,3 +210,96 @@
 
   document.addEventListener("click", e => { if (open && !open.box.contains(e.target)) close(open); });
 })();
+
+// ИИ-агент в интерфейсе: показ того, что агент делает. Сами вопросы, карточку и рейтинг готовит сервер.
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Сетка в шапке главной подсвечивается за курсором
+  const hero = document.querySelector(".home-hero");
+  if (hero && !reduce) hero.addEventListener("pointermove", e => {
+    const r = hero.getBoundingClientRect();
+    hero.style.setProperty("--hx", `${e.clientX - r.left}px`);
+    hero.style.setProperty("--hy", `${e.clientY - r.top}px`);
+  });
+
+  // Консоль с примером запуска: строки печатаются по очереди, потом цикл повторяется
+  const log = document.querySelector(".console-log");
+  if (log && !reduce) {
+    const lines = [...log.children], texts = lines.map(li => li.textContent);
+    const run = async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      for (;;) {
+        lines.forEach(li => { li.classList.add("later"); li.textContent = ""; });
+        for (let i = 0; i < lines.length; i++) {
+          const li = lines[i];
+          li.classList.remove("later"); li.classList.add("typing");
+          for (let k = 1; k <= texts[i].length; k += 2) { li.textContent = texts[i].slice(0, k); await wait(18); }
+          li.textContent = texts[i]; li.classList.remove("typing");
+          await wait(li.classList.contains("c-ask") ? 500 : 350);
+        }
+        await wait(5000);
+      }
+    };
+    run();
+  }
+
+  // Пока сервер обрабатывает форму (с ИИ это несколько секунд), показываем шаги агента
+  document.querySelectorAll("form[data-agent]").forEach(form => {
+    form.addEventListener("submit", e => {
+      if (e.defaultPrevented) return;
+      const steps = form.dataset.agent.split("|");
+      const box = document.createElement("div");
+      box.className = "agent-overlay";
+      box.setAttribute("role", "status");
+      box.innerHTML = `<div class="agent-panel"><div class="agent-orb"></div><h3>ИИ-агент работает</h3><ol class="agent-steps">${steps.map(s => `<li>${s}</li>`).join("")}</ol><p class="agent-note">Обычно это занимает несколько секунд.</p></div>`;
+      document.body.appendChild(box);
+      const items = box.querySelectorAll("li");
+      let i = 0;
+      const next = () => {
+        items.forEach((li, j) => { li.className = j < i ? "done" : j === i ? "now" : ""; });
+        if (i < items.length - 1) { i++; setTimeout(next, 1100); }
+      };
+      next();
+    });
+  });
+  // Возврат кнопкой «Назад» не должен оставлять экран ожидания
+  addEventListener("pageshow", () => document.querySelectorAll(".agent-overlay").forEach(o => o.remove()));
+
+  // Вопросы появляются по одному, будто агент их печатает
+  const cards = [...document.querySelectorAll(".q-form .q-card")];
+  if (cards.length && !reduce) {
+    const typing = document.createElement("div");
+    typing.className = "q-typing";
+    typing.innerHTML = "<i></i><i></i><i></i> агент формулирует вопросы";
+    cards[0].before(typing);
+    cards.forEach(c => { c.hidden = true; });
+    cards.forEach((c, n) => setTimeout(() => {
+      c.hidden = false;
+      if (n === cards.length - 1) typing.remove(); else c.after(typing);
+    }, 500 + n * 450));
+  }
+
+  // Карточка поднялась на новый уровень — короткое поздравление
+  const gauge = document.getElementById("gauge-card");
+  if (gauge && gauge.dataset.levelup) {
+    const toast = document.createElement("div");
+    toast.className = "levelup";
+    toast.setAttribute("role", "status");
+    toast.innerHTML = `<b>▲</b><span><small>новый уровень</small>«${gauge.dataset.levelup}»</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+    if (!reduce) {
+      const r = gauge.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 3;
+      const colors = ["var(--accent)", "var(--good)", "var(--pop)", "var(--pop-2)"];
+      for (let n = 0; n < 36; n++) {
+        const s = document.createElement("i");
+        s.className = "spark";
+        const a = Math.random() * Math.PI * 2, d = 80 + Math.random() * 140;
+        s.style.cssText = `left:${cx}px;top:${cy}px;background:${colors[n % 4]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d + 60}px;--r:${Math.random() * 540}deg`;
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 1200);
+      }
+    }
+  }
+})();

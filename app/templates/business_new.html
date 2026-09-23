@@ -7,7 +7,7 @@
 <h1>Разместить <em>задачу</em></h1>
 <p class="lede">Опишите задачу своими словами — система задаст не менее трёх уточняющих вопросов и соберёт редактируемую карточку.</p>
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-<form method="post" class="form-stack new-form">
+<form method="post" class="form-stack new-form" data-agent="Читаю черновик|Определяю, каких сведений не хватает|Сверяю с 7 показателями рейтинга|Формулирую уточняющие вопросы">
   <fieldset class="chips-field{% if errors.industry %} invalid{% endif %}">
     <legend>Отрасль</legend>
     <div class="chips">
