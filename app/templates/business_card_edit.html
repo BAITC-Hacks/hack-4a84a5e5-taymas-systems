@@ -9,24 +9,32 @@
 
 {% if message %}<p class="notice info">{{ message }}</p>{% endif %}
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if card.answers and card.status != "published" %}
+<p class="notice {% if answered == 0 %}warn{% else %}info{% endif %}">
+  Из ответов на уточняющие вопросы заполнено полей: {{ answered }} из {{ card.answers|length }}.
+  {% if answered == 0 %}Вопросы пропущены — карточка собрана только из черновика, дополните её вручную.{% endif %}
+</p>
+{% endif %}
 
 <div class="editor-layout">
   <form method="post" action="/business/cards/{{ card.id }}/edit" class="form-stack" id="card-form">
     {% for field in card_fields %}
     <label>{{ field_labels[field] }}
       {% if field == "title" %}
-      <input type="text" name="title" value="{{ card.title }}" maxlength="200">
+      <input type="text" name="title" value="{{ form_card.title }}" {% if errors[field] %}class="invalid"{% endif %}>
       {% else %}
-      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}">{{ card[field] }}</textarea>
+      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}" {% if errors[field] %}class="invalid"{% endif %}>{{ form_card[field] }}</textarea>
       {% endif %}
+      {% if errors[field] %}<span class="field-error">{{ errors[field] }}</span>{% endif %}
     </label>
     {% endfor %}
     <label>Отрасль
-      <select name="industry">
+      <select name="industry" {% if errors.industry %}class="invalid"{% endif %}>
         {% for industry in INDUSTRIES %}
-        <option value="{{ industry }}" {% if industry == card.industry %}selected{% endif %}>{{ industry }}</option>
+        <option value="{{ industry }}" {% if industry == form_card.industry %}selected{% endif %}>{{ industry }}</option>
         {% endfor %}
       </select>
+      {% if errors.industry %}<span class="field-error">{{ errors.industry }}</span>{% endif %}
     </label>
 
     <div class="form-actions">

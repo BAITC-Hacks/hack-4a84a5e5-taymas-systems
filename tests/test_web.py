@@ -9,7 +9,7 @@ def test_business_constructor_creates_editable_card(tmp_path):
     client = TestClient(app)
     assert client.get("/business/new").status_code == 200
 
-    questions = client.post("/business/new", data={"text": "A service is needed to process resident requests", "industry": "Other"})
+    questions = client.post("/business/new", data={"text": "A service is needed to process resident requests", "industry": "Другое"})
     assert questions.status_code == 200
     assert "answer_0" in questions.text
 
@@ -115,3 +115,108 @@ def test_published_card_edit_then_confirm_changes(tmp_path):
     assert saved.score > first_score
     assert saved.published_at == first_published_at
 
+
+
+def _client(tmp_path, **kwargs):
+    from app import store as store_module
+    from app.main import app
+
+    store = store_module.reset_store(tmp_path / "store.json", "data/seed.json")
+    return store, TestClient(app, **kwargs)
+
+
+def test_long_draft_is_rejected_with_message_not_500(tmp_path):
+    store, client = _client(tmp_path)
+    drafts_before = len(store.drafts)
+    text = "а" * 4001
+
+    response = client.post("/business/new", data={"text": text, "industry": "Образование"})
+    assert response.status_code == 400
+    assert "Не длиннее 4000 символов" in response.text
+    assert text in response.text
+    assert len(store.drafts) == drafts_before
+
+
+def test_unknown_industry_is_rejected_not_silently_replaced(tmp_path):
+    store, client = _client(tmp_path)
+    drafts_before = len(store.drafts)
+
+    response = client.post("/business/new", data={"text": "Нужен бот для записи студентов", "industry": "мусор"})
+    assert response.status_code == 400
+    assert "Выберите отрасль из списка" in response.text
+    assert "Нужен бот для записи студентов" in response.text
+    assert len(store.drafts) == drafts_before
+
+
+def test_draft_post_redirects_so_refresh_does_not_duplicate(tmp_path):
+    store, client = _client(tmp_path)
+    drafts_before = len(store.drafts)
+
+    response = client.post("/business/new", data={"text": "Нужен бот для записи студентов", "industry": "Образование"}, follow_redirects=False)
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert location.startswith("/business/drafts/")
+
+    assert client.get(location).status_code == 200
+    assert client.get(location).status_code == 200
+    assert len(store.drafts) == drafts_before + 1
+
+
+def test_all_answers_skipped_still_builds_card_and_says_so(tmp_path):
+    store, client = _client(tmp_path)
+    client.post("/business/new", data={"text": "Нужен бот для записи студентов на консультации", "industry": "Образование"})
+    draft = max(store.drafts.values(), key=lambda d: d.created_at)
+
+    response = client.post(f"/business/drafts/{draft.id}/answers", data={})
+    assert response.status_code == 200
+    assert f"заполнено полей: 0 из {len(draft.questions)}" in response.text
+
+
+def test_too_long_card_field_is_not_saved_and_input_kept(tmp_path):
+    from app.main import app
+
+    store, card = _weak_card(tmp_path)
+    client = TestClient(app)
+    long_data = "д" * 2001
+
+    response = client.post(f"/business/cards/{card.id}/edit", data={"title": "Новое название", "data": long_data})
+    assert response.status_code == 400
+    assert "Не длиннее 2000 символов" in response.text
+    assert long_data in response.text
+    saved = store.get_card(card.id)
+    assert saved.title == "Обработка обращений"
+    assert saved.data == ""
+
+    publish = client.post(f"/business/cards/{card.id}/publish", data={"data": long_data, "confirmed": "on"}, follow_redirects=False)
+    assert publish.status_code == 400
+    assert store.get_card(card.id).status == "draft"
+
+
+def test_unknown_url_gives_html_404_not_json(tmp_path):
+    _, client = _client(tmp_path)
+
+    response = client.get("/nonexistent")
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("text/html")
+    assert "Страница не найдена" in response.text
+    assert 'href="/catalog"' in response.text
+
+    missing_card = client.get("/business/cards/nope/edit")
+    assert missing_card.status_code == 404
+    assert "Карточка не найдена" in missing_card.text
+
+
+def test_server_error_gives_html_500(tmp_path, monkeypatch):
+    from app import main
+
+    store, client = _client(tmp_path, raise_server_exceptions=False)
+    card = next(iter(store.cards.values()))
+
+    def boom(_card):
+        raise RuntimeError("сбой")
+
+    monkeypatch.setattr(main, "compute_rating", boom)
+    response = client.get(f"/business/cards/{card.id}/edit")
+    assert response.status_code == 500
+    assert response.headers["content-type"].startswith("text/html")
+    assert "На главную" in response.text

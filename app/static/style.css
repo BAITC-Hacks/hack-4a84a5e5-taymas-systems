@@ -49,3 +49,11 @@ button.primary { background: #1c6b39; }
 .rating-panel h3 { font-size: 15px; margin: 16px 0 6px; }
 .rating-panel .missing { padding-left: 20px; font-size: 14px; }
 .legend { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 13px; }
+/* Валидация и страница ошибки (HAC-20) */
+.field-error { color: #8b1e1e; font-size: 13px; font-weight: 500; }
+.hint { color: var(--muted); font-size: 13px; font-weight: 400; }
+.invalid { border-color: #c0392b !important; background: #fffafa; }
+.notice.warn { color: #8a5a00; background: #fff4e0; }
+.error-page { text-align: center; padding: 48px 16px; }
+.error-code { font-size: 64px; font-weight: 800; color: var(--accent); line-height: 1; }
+.error-links a { color: var(--accent); font-weight: 650; }
