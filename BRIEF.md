@@ -74,7 +74,7 @@ MVP помогает представителю бизнеса преврати�
 - [x] «Если внешний API недоступен, допускается локальная заглушка, однако команда должна показать промпт, формат входа и выхода и обработку некорректного ответа» — раздел «AI-функции» в README
 - [x] «ИИ не должен добавлять факты, которых не сообщил пользователь» — защита в `build_card`, тесты
 - [x] «Сформированный текст редактируется и подтверждается человеком до публикации»
-- [ ] «ИИ **может** рекомендовать студентам задачи по интересам и навыкам, но не ограничивает общий каталог» — необязательно, HAC-26 в «потом»
+- [x] «ИИ **может** рекомендовать студентам задачи по интересам и навыкам, но не ограничивает общий каталог» — сделано 16:19: `app/recommend.py` (HAC-26, детерминированно, только карточки с баллом ≥ 40) и блок «Подходит команде» в каталоге (HAC-52); каталог ниже остаётся полным
 - [x] «ИИ не выбирает команду за бизнес и не назначает исполнителей автоматически»
 - [x] «Персональные и чувствительные признаки участников не используются»
 
@@ -186,6 +186,19 @@ def generate_questions(draft_text: str, industry: str) -> list[Question]: ...   
 def build_card(draft_text: str, industry: str, answers: list[Answer]) -> CardFields: ...
 def ai_mode() -> str: ...   # "openai" | "nvidia" | "stub" — для показа в интерфейсе
 
+# app/recommend.py  (ядро, HAC-26) — рекомендации командам, детерминированно, только карточки с score >= 40
+def recommend_tasks(team: Team, cards: list[Card], limit: int = 3) -> list[tuple[Card, str]]: ...
+
+# app/trial.py  (HAC-56) — испытание карточки виртуальной командой; вердикт и блокеры детерминированы,
+# план и причины через app/llm.py, без ключа — заглушка. Баллы не начисляет.
+def run_trial(card: Card, team: Team) -> Trial: ...     # никогда не бросает
+def trial_badge(card: Card) -> bool: ...                # знак «прошла испытание»: подтверждённая версия выдержала
+class TrialStep(BaseModel):    text: str; blocked: bool
+class TrialBlocker(BaseModel): key: str; label: str; reason: str; gain: int
+class Trial(BaseModel):        team_id, team_name, passed: bool, verdict: str, steps: list[TrialStep],
+                               blockers: list[TrialBlocker], risks: list[TrialBlocker], next_step: str,
+                               score_at: int, mode: str, created_at          # хранится в Card.trial: Trial | None
+
 # app/llm.py  (ядро)
 class LLMClient:
     def complete(self, messages: list[dict[str, str]], *, json_schema: type[BaseModel] | None = None,
@@ -214,6 +227,8 @@ list_teams() · get_team(id) · add_proposal(p) · get_proposal(id) · update_pr
 | `POST /tasks/{id}/proposals` | Новый отклик, статус pending |
 | `POST /proposals/{id}/decision` (decision=accept/reject) | Ручное решение бизнеса |
 | `GET /health` | `status`, `ai_mode`, `ai_fallback`, счётчики `cards_total`/`cards_published`/`teams`/`proposals`/`drafts`, `store`, `version` (расширен в HAC-35) |
+| `GET /business/cards/{id}/trial` · `POST /business/cards/{id}/trial` (team_id) | Испытание задачи виртуальной командой (HAC-56): страница с выбором команды и последним результатом; POST запускает `run_trial`, сохраняет `Card.trial`, 303 на GET |
+| `GET /catalog.json?industry=&level=` · `GET /feed.json` | JSON-срезы для живого каталога (HAC-57): карточки в порядке каталога с позициями и `trial_passed`; лента последних событий. Только чтение |
 
 ### Подтверждение и рейтинг (уточнено 13:50)
 
