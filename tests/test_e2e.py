@@ -169,5 +169,10 @@ def test_full_demo_scenario(client):
 
 def test_empty_draft_is_rejected(client):
     """Надёжность: очевидный мусор на входе обрабатывается, а не роняет сценарий."""
+    from app.store import get_store
+
     r = client.post("/business/new", data={"text": "   ", "industry": "Образование"})
-    assert r.status_code in (200, 422), "пустой черновик должен вернуть понятный ответ, а не 500"
+    assert r.status_code < 500, "пустой черновик должен вернуть понятный ответ, а не 500"
+    assert not [d for d in get_store().drafts.values() if not d.text.strip()], (
+        "пустой черновик не должен попадать в хранилище"
+    )
