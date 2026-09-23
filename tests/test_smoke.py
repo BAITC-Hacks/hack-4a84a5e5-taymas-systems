@@ -51,5 +51,9 @@ def test_rating_and_ai_stubs():
     assert len(qs) >= 3
     empty = compute_rating(CardFields())
     assert empty.score == 0 and empty.level == "draft"
-    card = build_card("Нужен бот для студентов", "Образование", [Answer(field=q.field, question=q.question, answer="ответ") for q in qs])
+    card = build_card(
+        "Нужен бот для студентов",
+        "Образование",
+        [Answer(field=q.field, question=q.question, answer=f"Развёрнутый ответ на вопрос: {q.question}") for q in qs],
+    )
     assert compute_rating(card).score > empty.score
