@@ -257,3 +257,26 @@ def test_health_reports_mode_counters_and_version(tmp_path, monkeypatch):
 
     monkeypatch.delenv("APP_VERSION")
     assert client.get("/health").json()["version"] == "dev"
+
+
+def test_footer_shows_stub_after_llm_call_failure(tmp_path, monkeypatch):
+    from app import ai
+    from app.llm import LLMResponseError
+
+    class FailingClient:
+        def complete(self, *args, **kwargs):
+            raise LLMResponseError("timeout")
+
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai.settings, "LLM_PROVIDER", "openai")
+    monkeypatch.setattr(ai, "get_client", lambda: FailingClient())
+    monkeypatch.setattr(ai, "last_fallback_reason", None)
+    _, client = _client(tmp_path)
+
+    assert "режим ИИ: openai" in client.get("/").text
+
+    questions = client.post("/business/new", data={"text": "Нужен бот для записи студентов", "industry": "Образование"})
+    assert questions.status_code == 200
+    assert "answer_0" in questions.text
+    assert "режим ИИ: заглушка (OpenAI недоступен:" in questions.text
+    assert "режим ИИ: заглушка (OpenAI недоступен:" in client.get("/catalog").text

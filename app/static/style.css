@@ -89,3 +89,5 @@ button.primary { background: #1c6b39; }
 .weight-tag.half { background: #fff4e0; color: #8a5a00; }
 .weight-tag.zero { background: #fdecea; color: #8a2020; }
 textarea::placeholder, input::placeholder { color: #98a2b3; }
+/* Резервный режим ИИ в подвале (HAC-36) */
+.footer .ai-fallback { color: #8a5a00; background: #fff4e0; padding: 2px 8px; border-radius: 6px; }

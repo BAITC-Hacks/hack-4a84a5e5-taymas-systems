@@ -20,6 +20,7 @@ from app.models import CARD_FIELDS, FIELD_LABELS, INDUSTRIES, LEVEL_LABELS, Answ
 from app.rating import SCALE, compute_rating
 from app.store import get_store
 from app.web_catalog import router as catalog_router
+from app.web_catalog import templates as catalog_templates
 
 BASE_DIR = Path(__file__).parent
 
@@ -30,6 +31,24 @@ templates.env.globals.update(INDUSTRIES=INDUSTRIES, LEVEL_LABELS=LEVEL_LABELS)
 
 # Каталог и страница задачи живут в своём модуле (HAC-12, HAC-13).
 app.include_router(catalog_router)
+
+_PROVIDER_NAMES = {"openai": "OpenAI", "nvidia": "NVIDIA"}
+
+
+def ai_status() -> str:
+    """Подпись режима ИИ для подвала: при откате на заглушку после сбоя вызова говорит об этом прямо."""
+    mode = ai.ai_mode()
+    reason = ai.last_fallback_reason
+    if mode == "stub" or not reason:
+        return mode
+    if len(reason) > 160:
+        reason = reason[:157] + "…"
+    return f"заглушка ({_PROVIDER_NAMES.get(mode, mode)} недоступен: {reason})"
+
+
+# У роутера каталога свой объект шаблонов — подвал общий, поэтому глобал ставится в оба.
+for _env in (templates.env, catalog_templates.env):
+    _env.globals["ai_status"] = ai_status
 
 logger = logging.getLogger(__name__)
 

@@ -17,6 +17,6 @@
   <main class="container">
     {% block content %}{% endblock %}
   </main>
-  <footer class="footer">TayMas Systems · HackAlem AI 2026 · режим ИИ: {{ ai_mode }}</footer>
+  <footer class="footer">TayMas Systems · HackAlem AI 2026 · {% set ai_label = ai_status() %}<span {% if ai_label.startswith("заглушка") %}class="ai-fallback"{% endif %}>режим ИИ: {{ ai_label }}</span></footer>
 </body>
 </html>
