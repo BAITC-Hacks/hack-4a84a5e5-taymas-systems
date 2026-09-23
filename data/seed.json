@@ -248,6 +248,80 @@
         "Kotlin",
         "PostgreSQL"
       ]
+    },
+    {
+      "id": "t_seed0006",
+      "name": "EduPulse",
+      "interests": [
+        "Госуслуги",
+        "Другое"
+      ],
+      "skills": [
+        "анализ данных",
+        "веб-разработка",
+        "UX-дизайн"
+      ],
+      "technologies": [
+        "Python",
+        "Django",
+        "Vue.js",
+        "PostgreSQL"
+      ]
+    },
+    {
+      "id": "t_seed0007",
+      "name": "FinGuard",
+      "interests": [
+        "Финансы"
+      ],
+      "skills": [
+        "машинное обучение",
+        "бэкенд",
+        "безопасность"
+      ],
+      "technologies": [
+        "Python",
+        "FastAPI",
+        "scikit-learn",
+        "Docker"
+      ]
+    },
+    {
+      "id": "t_seed0008",
+      "name": "CareBot",
+      "interests": [
+        "Медицина"
+      ],
+      "skills": [
+        "чат-боты",
+        "бэкенд",
+        "интеграции"
+      ],
+      "technologies": [
+        "TypeScript",
+        "NestJS",
+        "Telegram Bot API",
+        "Redis"
+      ]
+    },
+    {
+      "id": "t_seed0009",
+      "name": "RetailLab",
+      "interests": [
+        "Ритейл",
+        "Логистика"
+      ],
+      "skills": [
+        "прогнозирование",
+        "анализ данных",
+        "дашборды"
+      ],
+      "technologies": [
+        "Python",
+        "pandas",
+        "Prophet",
+        "Superset"
+      ]
     }
   ],
   "proposals": [

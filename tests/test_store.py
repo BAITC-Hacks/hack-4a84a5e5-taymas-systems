@@ -16,7 +16,7 @@ def store(tmp_path):
 
 
 def test_seed_volume(store):
-    assert (len(store.drafts), len(store.cards), len(store.teams), len(store.proposals)) == (5, 5, 5, 5)
+    assert (len(store.drafts), len(store.cards), len(store.teams), len(store.proposals)) == (5, 5, 9, 5)
 
 
 def test_catalog_sorted_by_score_then_recency(store):
