@@ -105,3 +105,9 @@
 /* Испытание задачи (HAC-56): знак «прошла испытание» в каталоге и на странице задачи */
 .trial-mark { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
   background: var(--good); color: #05180f; }
+
+/* Подходящие команды на странице задачи — обратная сторона рекомендаций (HAC-26) */
+.fit-list { list-style: none; padding: 0; margin: 0 0 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fit-list li { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.fit-list p { margin: 6px 0 0; font-size: 14px; }
+.fit-skills { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }

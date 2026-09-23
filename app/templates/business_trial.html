@@ -61,11 +61,12 @@
     <label>В роли команды
       <select name="team_id">
         {% for team in teams %}
-        <option value="{{ team.id }}" {% if trial and trial.team_id == team.id %}selected{% endif %}>{{ team.name }} — {{ team.skills|join(", ") }}</option>
+        <option value="{{ team.id }}" {% if (trial and trial.team_id == team.id) or (not trial and suggested and suggested[0].id == team.id) %}selected{% endif %}>{{ team.name }} — {{ team.skills|join(", ") }}</option>
         {% endfor %}
       </select>
     </label>
     <button type="submit">{% if trial %}Повторить испытание{% else %}Проверить глазами команды{% endif %}</button>
+    {% if suggested %}<p class="trial-note" style="flex-basis: 100%;">Подсказка: задаче по профилю подходит <strong>{{ suggested[0].name }}</strong> — {{ suggested[1] }}. Проверять можно любой командой.</p>{% endif %}
   </form>
 
   {% if trial %}

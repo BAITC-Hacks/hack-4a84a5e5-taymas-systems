@@ -191,3 +191,9 @@ def test_weak_card_trial_page_shows_blockers(client):
     assert "Не выдержала" in response.text
     assert "Стоп" in response.text
     assert "+20" in response.text
+
+
+def test_trial_page_suggests_matching_team(client):
+    page = client.get("/business/cards/c_seed0001/trial")
+    assert "Подсказка: задаче по профилю подходит <strong>DataBee</strong>" in page.text
+    assert 'value="t_seed0001" selected' in page.text

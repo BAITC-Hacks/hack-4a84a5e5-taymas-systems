@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import ai
 from app.models import Card
 from app.rating import compute_rating
+from app.recommend import recommend_tasks
 from app.store import get_store
 from app.trial import run_trial, trial_badge, trial_is_current
 from app.web_catalog import templates  # общий Jinja-env каталога: там уже глобалы ai_status и LEVEL_LABELS
@@ -27,14 +28,27 @@ def _card_or_404(card_id: str) -> Card:
     return card
 
 
+def _suggest_team(card: Card, teams, score: int):
+    """Команда, которой задача подходит по профилю (правила app/recommend.py, по предварительному баллу)."""
+    preview = card.model_copy(update={"score": score})
+    for team in teams:
+        matched = recommend_tasks(team, [preview], limit=1)
+        if matched:
+            return team, matched[0][1]
+    return None
+
+
 def _page(request: Request, card: Card, *, error: str = "", status_code: int = 200):
+    rating = compute_rating(card)
+    teams = get_store().list_teams()
     return templates.TemplateResponse(
         request,
         "business_trial.html",
         {
             "card": card,
-            "rating": compute_rating(card),
-            "teams": get_store().list_teams(),
+            "rating": rating,
+            "teams": teams,
+            "suggested": _suggest_team(card, teams, rating.score),
             "trial": card.trial,
             "current": trial_is_current(card),
             "error": error,

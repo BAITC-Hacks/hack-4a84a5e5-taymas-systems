@@ -63,6 +63,22 @@
   {% endif %}
 </section>
 
+<section class="fit-teams">
+  <h2>Подходящие команды</h2>
+  {% if fitting_teams %}
+  <ul class="fit-list">
+    {% for team, reason in fitting_teams %}
+    <li><strong>{{ team.name }}</strong> <span class="fit-skills">{{ team.skills|join(", ") }}</span><p>{{ reason }}</p></li>
+    {% endfor %}
+  </ul>
+  <p class="note">Система подсказывает по профилям команд из каталога, а выбирает бизнес вручную — откликнуться может любая команда.</p>
+  {% elif card.score < 40 %}
+  <p class="note">Рекомендации открываются с уровня «Рабочая» (40 баллов): пока задача черновик, система никого не подсказывает.</p>
+  {% else %}
+  <p class="note">По профилям команд из каталога совпадений пока нет — откликнуться всё равно может любая.</p>
+  {% endif %}
+</section>
+
 <section id="proposals">
   <h2>Отклики команд <span class="count">{{ proposals|length }}</span></h2>
   {% if proposals %}
