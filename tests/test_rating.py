@@ -3,7 +3,7 @@
 import pytest
 
 from app.models import CardFields
-from app.rating import SCALE, compute_rating, level_for
+from app.rating import SCALE, compute_rating, level_for, next_best_action, progress_bar, rating_summary
 
 SEED_CARD_FULL = CardFields(
     title="Рекомендации курсов для студентов колледжа",
@@ -139,3 +139,50 @@ def test_mini_example_from_ticket():
 def test_level_for_thresholds(level, lo, hi):
     assert level_for(lo) == level
     assert level_for(hi) == level
+
+
+# --- progress_bar / next_best_action / rating_summary --------------------
+
+def test_progress_bar_extremes_and_length():
+    assert progress_bar(0) == "░░░░░░░░░░ 0/100"
+    assert progress_bar(100) == "██████████ 100/100"
+    bar = progress_bar(50)
+    assert bar == "█████░░░░░ 50/100"
+    assert bar.count("█") + bar.count("░") == 10
+
+
+def test_progress_bar_clamps_out_of_range_scores():
+    assert progress_bar(-10) == progress_bar(0)
+    assert progress_bar(150) == progress_bar(100)
+
+
+def test_progress_bar_custom_width():
+    bar = progress_bar(20, width=5)
+    assert bar == "█░░░░ 20/100"
+
+
+def test_next_best_action_returns_top_hint_for_empty_card():
+    rating = compute_rating(CardFields())
+    hint = next_best_action(rating)
+    assert hint is not None
+    assert hint == rating.missing[0]
+
+
+def test_next_best_action_is_none_when_rating_full():
+    rating = compute_rating(SEED_CARD_FULL)
+    assert next_best_action(rating) is None
+
+
+def test_rating_summary_mentions_score_level_and_hint():
+    rating = compute_rating(CardFields())
+    summary = rating_summary(rating)
+    assert "0/100" in summary
+    assert "Черновик" in summary
+    assert "Не хватает" in summary
+
+
+def test_rating_summary_has_no_hint_when_full():
+    rating = compute_rating(SEED_CARD_FULL)
+    summary = rating_summary(rating)
+    assert summary == f"{rating.score}/100 — {rating.level_label}"
+    assert "Не хватает" not in summary

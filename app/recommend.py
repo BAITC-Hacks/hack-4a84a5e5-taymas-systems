@@ -22,6 +22,7 @@ _TEXT_FIELDS = ("title", "context", "need", "expected_result")
 
 _INDUSTRY_SIGNAL = 2
 _TEXT_SIGNAL = 1
+_MAX_REASONS = 2  # объяснение прозрачное, но не превращается в простыню
 
 
 def _text_mentions(card: Card, keyword: str) -> bool:
@@ -33,17 +34,40 @@ def _text_mentions(card: Card, keyword: str) -> bool:
 
 
 def _match(team: Team, card: Card) -> tuple[int, str] | None:
-    """Сила совпадения (2 — по отрасли, 1 — по тексту карточки) и объяснение, либо None."""
+    """Сила совпадения (2 — по отрасли, 1 — по тексту карточки) и объяснение, либо None.
+
+    Объяснение собирает до двух причин через «; »: совпадение по отрасли — самая
+    сильная и всегда первая, затем конкретные упоминания интересов или технологий
+    в тексте карточки — это делает рекомендацию прозрачнее одной общей фразы.
+    """
+    reasons: list[str] = []
+    signal = 0
+
     for interest in team.interests:
         if interest.strip().lower() == card.industry.strip().lower():
-            return _INDUSTRY_SIGNAL, f'Совпадает интерес „{interest}“ с отраслью задачи'
+            reasons.append(f'совпадает интерес „{interest}“ с отраслью задачи')
+            signal = _INDUSTRY_SIGNAL
+            break
+
     for interest in team.interests:
+        if len(reasons) >= _MAX_REASONS:
+            break
         if _text_mentions(card, interest):
-            return _TEXT_SIGNAL, f'В задаче упоминается „{interest}“ — есть в интересах команды'
-    for technology in team.technologies:
-        if _text_mentions(card, technology):
-            return _TEXT_SIGNAL, f'В задаче упоминается „{technology}“ — есть среди технологий команды'
-    return None
+            reasons.append(f'в задаче упоминается „{interest}“ — есть в интересах команды')
+            signal = max(signal, _TEXT_SIGNAL)
+
+    if len(reasons) < _MAX_REASONS:
+        for technology in team.technologies:
+            if len(reasons) >= _MAX_REASONS:
+                break
+            if _text_mentions(card, technology):
+                reasons.append(f'в задаче упоминается „{technology}“ — есть среди технологий команды')
+                signal = max(signal, _TEXT_SIGNAL)
+
+    if not reasons:
+        return None
+    explanation = "; ".join(reasons)
+    return signal, explanation[0].upper() + explanation[1:]
 
 
 def recommend_tasks(team: Team, cards: list[Card], limit: int = 3) -> list[tuple[Card, str]]:
