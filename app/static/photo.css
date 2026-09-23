@@ -1,0 +1,24 @@
+/* Черновик из фото (HAC-58). Токены — из style.css, свои только классы photo-*. */
+.photo-attach { display: grid; gap: 10px; padding: 14px 18px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.photo-attach [hidden] { display: none !important; }
+.photo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.photo-attach .photo-btn { position: relative; display: inline-block; font: inherit; }
+.photo-btn input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.photo-btn span { display: inline-flex; align-items: center; gap: 9px; padding: 12px 18px; border-radius: 999px; background: transparent; color: var(--text); box-shadow: inset 0 0 0 2px var(--text); font: 800 14px/1 var(--body); cursor: pointer; transition: transform .25s var(--spring), box-shadow .25s; }
+.photo-btn span:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 2px var(--text), 0 10px 24px rgba(0, 0, 0, .12); }
+.photo-btn input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 3px; }
+.photo-attach.busy .photo-btn span { opacity: .5; pointer-events: none; }
+.photo-ico { width: 15px; height: 12px; border: 2px solid currentColor; border-radius: 3px; position: relative; }
+.photo-ico::after { content: ""; position: absolute; inset: 1px 3px; border-radius: 50%; border: 2px solid currentColor; }
+.photo-row .hint { flex: 1 1 260px; max-width: 52ch; }
+.photo-hint-mode { margin: 0; }
+.photo-status { margin: 0; font-size: 14px; font-weight: 700; }
+.photo-status.ok { color: var(--good); }
+.photo-status.err { color: var(--bad); }
+.photo-status.busy { color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.photo-status.busy::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: photo-spin .8s linear infinite; }
+@keyframes photo-spin { to { transform: rotate(360deg); } }
+.photo-preview { margin: 0; display: grid; gap: 6px; justify-items: start; }
+.photo-preview img { max-height: 180px; max-width: 100%; width: auto; border-radius: var(--r-s); box-shadow: inset 0 0 0 1px var(--line); }
+.draft-box.dragover { box-shadow: inset 0 0 0 2px var(--accent), 0 0 0 6px var(--glow); }
+@media (prefers-reduced-motion: reduce) { .photo-status.busy::before { animation: none; } .photo-btn span:hover { transform: none; } }

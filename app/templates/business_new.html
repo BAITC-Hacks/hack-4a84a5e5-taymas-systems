@@ -21,6 +21,7 @@
     <textarea name="text" rows="8" required maxlength="6000" data-limit="4000" placeholder="Что происходит сейчас, что нужно решить и для кого?" {% if errors.text %}class="invalid"{% endif %}>{{ text or '' }}</textarea>
     {% if errors.text %}<span class="field-error">{{ errors.text }}</span>{% else %}<span class="hint"><span class="counter-live" data-for="text">0</span> / 4000 символов · пары фраз достаточно</span>{% endif %}
   </label>
+  {% include "_photo_attach.html" %}
   <button type="submit" class="big-go">Получить уточняющие вопросы <span class="arr">→</span></button>
 </form>
 {% endblock %}

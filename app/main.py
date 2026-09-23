@@ -23,6 +23,7 @@ from app.web_catalog import router as catalog_router
 from app.web_catalog import templates as catalog_templates
 from app.web_live import router as live_router
 from app.web_trial import router as trial_router
+from app.web_vision import router as vision_router
 
 BASE_DIR = Path(__file__).parent
 
@@ -37,6 +38,7 @@ app.include_router(catalog_router)
 # чтобы надстройки не пересекались по файлам ни между собой, ни с редизайном поверхности.
 app.include_router(live_router)
 app.include_router(trial_router)
+app.include_router(vision_router)  # черновик из фото (HAC-58)
 
 _PROVIDER_NAMES = {"openai": "OpenAI", "nvidia": "NVIDIA"}
 

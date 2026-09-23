@@ -1,0 +1,22 @@
+{# Черновик из фото (HAC-58). Подключается одной строкой в business_new.html; всё своё — photo.css и photo.js. #}
+<link rel="stylesheet" href="/static/photo.css">
+<div class="photo-attach" data-endpoint="/business/photo">
+  <div class="photo-row">
+    <label class="photo-btn">
+      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Приложить фото">
+      <span><i class="photo-ico" aria-hidden="true"></i>Приложить фото</span>
+    </label>
+    <span class="hint">снимок с телефона, скриншот или Ctrl+V прямо в поле черновика · модель опишет только то, что видно, и вставит текст в черновик — вы его правите</span>
+  </div>
+  {% if ai_mode == 'stub' %}
+  <p class="hint photo-hint-mode">Сейчас ключа OpenAI нет: анализ фото недоступен, кнопка честно скажет об этом. Остальной путь работает без ключа.</p>
+  {% elif ai_mode and ai_mode != 'openai' %}
+  <p class="hint photo-hint-mode">Сейчас провайдер «{{ ai_mode }}»: он не видит изображений, анализ фото работает только с OpenAI.</p>
+  {% endif %}
+  <p class="photo-status" role="status" aria-live="polite" hidden></p>
+  <figure class="photo-preview" hidden>
+    <img alt="Приложенное фото">
+    <figcaption class="hint"></figcaption>
+  </figure>
+</div>
+<script src="/static/photo.js" defer></script>
