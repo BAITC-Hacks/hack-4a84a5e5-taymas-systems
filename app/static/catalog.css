@@ -1,0 +1,87 @@
+/* Каталог и страница задачи (HAC-12, HAC-13). Отдельный файл от style.css,
+   чтобы два потока веб-слоя не конфликтовали в одном стиле. */
+
+.lead { color: #55606d; max-width: 70ch; }
+
+.filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 16px 0; }
+.filters label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #55606d; }
+.filters select, .filters input { padding: 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+.filters button { padding: 9px 18px; border: 0; border-radius: 8px; background: var(--accent); color: #fff;
+  font-size: 14px; cursor: pointer; }
+.filters .reset { font-size: 13px; color: #55606d; padding-bottom: 10px; }
+
+.counter { color: #55606d; font-size: 14px; }
+
+.task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.task-row { display: flex; gap: 16px; align-items: flex-start; background: #fff;
+  border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.task-row.level-priority { border-color: var(--accent); border-width: 2px; background: #f7faff; }
+.rank { font-size: 20px; font-weight: 700; color: var(--muted); min-width: 28px; }
+.task-main { flex: 1; }
+.task-title { font-size: 17px; font-weight: 600; color: var(--ink); text-decoration: none; }
+.task-title:hover { text-decoration: underline; }
+.task-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; font-size: 13px; }
+.industry { color: #55606d; }
+.task-need { margin: 8px 0 0; color: #55606d; font-size: 14px; }
+.score { font-size: 26px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.score span { font-size: 13px; font-weight: 400; color: var(--muted); }
+.score.big { font-size: 40px; }
+
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge-draft { background: #f1f3f5; color: #55606d; }
+.badge-workable { background: #fff4e0; color: #8a5a00; }
+.badge-ready { background: #e4f5e9; color: #1c6b39; }
+.badge-priority { background: #e5edff; color: #1a3f8f; }
+.badge-pending { background: #fff4e0; color: #8a5a00; }
+.badge-accepted { background: #e4f5e9; color: #1c6b39; }
+.badge-rejected { background: #f8e6e6; color: #8a2020; }
+.warn { color: #8a5a00; font-size: 12px; }
+.star { color: #1a3f8f; font-size: 12px; font-weight: 600; }
+.empty { color: #55606d; background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 20px; }
+
+.breadcrumb a { color: #55606d; text-decoration: none; font-size: 14px; }
+.task-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.task-head h1 { margin-bottom: 4px; }
+.edit-link { font-size: 14px; }
+.error { background: #f8e6e6; color: #8a2020; border-radius: 8px; padding: 12px 16px; }
+
+.card-fields { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin: 0; }
+.card-fields dt { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin-top: 14px; }
+.card-fields dt:first-child { margin-top: 0; }
+.card-fields dd { margin: 4px 0 0; }
+
+.rating-table { width: 100%; border-collapse: collapse; background: #fff;
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 14px; }
+.rating-table th, .rating-table td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.rating-table thead th { background: #f6f8fa; font-size: 12px; text-transform: uppercase; color: var(--muted); }
+.rating-table tfoot th { background: #f6f8fa; }
+.rating-table .num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rating-table .hint { color: #55606d; }
+.missing-list { color: #55606d; }
+
+.proposals { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.proposal { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.proposal.status-accepted { border-left: 4px solid #1c6b39; }
+.proposal.status-rejected { opacity: .7; }
+.proposal-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.proposal p { margin: 8px 0 0; font-size: 14px; }
+.date { color: var(--muted); font-size: 12px; margin-left: auto; }
+.count { color: var(--muted); font-weight: 400; }
+.decision { display: flex; gap: 8px; margin-top: 12px; }
+.decision button, .proposal-form button { padding: 8px 16px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; font-size: 14px; cursor: pointer; }
+.decision button.primary, .proposal-form button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.note { color: var(--muted); font-size: 13px; }
+
+.proposal-form { display: flex; flex-direction: column; gap: 12px; background: #fff;
+  border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.proposal-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #55606d; }
+.proposal-form select, .proposal-form textarea, .proposal-form input {
+  padding: 9px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; }
+.proposal-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.proposal-form button { align-self: flex-start; }
+
+@media (max-width: 640px) {
+  .task-head, .proposal-form .row { flex-direction: column; grid-template-columns: 1fr; }
+}

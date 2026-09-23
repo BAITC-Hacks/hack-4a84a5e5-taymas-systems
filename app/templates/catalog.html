@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Каталог задач — AI Sana Challenge Hub{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/catalog.css">
+
+<h1>Каталог задач</h1>
+<p class="lead">Все опубликованные задачи доступны всем командам и отсортированы по рейтингу готовности.
+Низкий рейтинг задачу не скрывает — он только показывает, что её стоит уточнить.</p>
+
+<form class="filters" method="get" action="/catalog">
+  <label>
+    Тема
+    <select name="industry">
+      <option value="">Все темы</option>
+      {% for item in INDUSTRIES %}
+      <option value="{{ item }}" {% if item == industry %}selected{% endif %}>{{ item }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Уровень готовности
+    <select name="level">
+      <option value="">Любой уровень</option>
+      {% for key, label in LEVEL_LABELS.items() %}
+      <option value="{{ key }}" {% if key == level %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Применить</button>
+  <a class="reset" href="/catalog">Сбросить</a>
+</form>
+
+<p class="counter">Показано {{ shown }} из {{ total }} опубликованных задач.</p>
+
+{% if cards %}
+<ol class="task-list">
+  {% for card in cards %}
+  <li class="task-row level-{{ card.level }}">
+    <div class="rank">{{ loop.index }}</div>
+    <div class="task-main">
+      <a class="task-title" href="/tasks/{{ card.id }}">{{ card.title or "Без названия" }}</a>
+      <div class="task-meta">
+        <span class="industry">{{ card.industry }}</span>
+        <span class="badge badge-{{ card.level }}">{{ card.level_label }}</span>
+        {% if card.level == "draft" %}<span class="warn">требует уточнения</span>{% endif %}
+        {% if card.level == "priority" %}<span class="star">приоритетная задача</span>{% endif %}
+      </div>
+      {% if card.need %}<p class="task-need">{{ card.need }}</p>{% endif %}
+    </div>
+    <div class="score" title="Подтверждённый рейтинг готовности">{{ card.score }}<span>/100</span></div>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="empty">По этим фильтрам задач нет. <a href="/catalog">Сбросить фильтры</a></p>
+{% endif %}
+{% endblock %}

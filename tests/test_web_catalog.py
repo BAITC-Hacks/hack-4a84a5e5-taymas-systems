@@ -1,0 +1,173 @@
+"""Тесты каталога и страницы задачи (HAC-12, HAC-13).
+
+Отдельный файл от tests/test_web.py: конструктор и редактор делает другой поток,
+общий файл тестов на двоих — конфликт при каждом слиянии.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture()
+def client(tmp_path):
+    from app import store as store_module
+
+    store_module.reset_store(tmp_path / "store.json", "data/seed.json")
+    from app.main import app
+
+    return TestClient(app)
+
+
+# --- каталог (HAC-12) ------------------------------------------------------
+
+
+def test_catalog_lists_published_sorted_by_score(client):
+    r = client.get("/catalog")
+    assert r.status_code == 200
+    from app.store import get_store
+
+    cards = get_store().list_cards()
+    assert r.text.count('class="task-row') == len(cards)
+    # Первой идёт карточка с максимальным баллом.
+    positions = [r.text.index(c.title) for c in cards]
+    assert positions == sorted(positions)
+    assert cards[0].score == max(c.score for c in cards)
+
+
+def test_catalog_filters_by_level_and_industry(client):
+    r = client.get("/catalog?level=priority")
+    assert r.status_code == 200
+    assert "Рекомендации курсов" in r.text
+    assert "Проверка заявок на микрокредиты" not in r.text  # уровень draft
+
+    r = client.get("/catalog?industry=Логистика")
+    assert "Планирование маршрутов" in r.text
+    assert "Прогноз спроса" not in r.text
+
+    # Оба фильтра вместе, заведомо пустая комбинация.
+    r = client.get("/catalog?industry=Логистика&level=priority")
+    assert "По этим фильтрам задач нет" in r.text
+
+
+def test_catalog_ignores_unknown_filter_values(client):
+    r = client.get("/catalog?industry=Неизвестно&level=чтототакое")
+    assert r.status_code == 200
+    assert "Рекомендации курсов" in r.text  # мусор в фильтрах = фильтра нет
+
+
+def test_catalog_marks_draft_and_priority(client):
+    r = client.get("/catalog")
+    assert "требует уточнения" in r.text  # низкий рейтинг помечен, но не скрыт
+    assert "Проверка заявок на микрокредиты" in r.text
+    assert "приоритетная задача" in r.text
+
+
+# --- страница задачи (HAC-13) ---------------------------------------------
+
+
+def test_task_page_shows_fields_rating_and_proposals(client):
+    r = client.get("/tasks/c_seed0001")
+    assert r.status_code == 200
+    assert "Из чего складывается рейтинг" in r.text
+    assert "Контекст и потребность" in r.text  # расшифровка по показателям
+    assert "DataBee" in r.text  # отклик из сида
+    assert "Система не назначает исполнителей автоматически" in r.text
+
+
+def test_task_page_unknown_card_404(client):
+    assert client.get("/tasks/нет-такой").status_code == 404
+
+
+def test_proposal_created_and_visible(client):
+    from app.store import get_store
+
+    before = len(get_store().list_proposals("c_seed0003"))
+    r = client.post(
+        "/tasks/c_seed0003/proposals",
+        data={
+            "team_id": "t_seed0001",
+            "idea": "Собрать сервис маршрутизации на открытых картах",
+            "plan": "Неделя на данные, неделя на алгоритм, неделя на интерфейс",
+            "deadline": "3 недели",
+            "link": "https://example.kz/prototype",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    proposals = get_store().list_proposals("c_seed0003")
+    assert len(proposals) == before + 1
+    assert proposals[-1].status == "pending"
+    assert "Собрать сервис маршрутизации" in client.get("/tasks/c_seed0003").text
+
+
+def test_proposal_requires_idea_and_plan(client):
+    from app.store import get_store
+
+    before = len(get_store().list_proposals("c_seed0003"))
+    r = client.post(
+        "/tasks/c_seed0003/proposals",
+        data={"team_id": "t_seed0001", "idea": "   ", "plan": "План есть"},
+    )
+    assert r.status_code == 200
+    assert "обязательные поля" in r.text
+    assert len(get_store().list_proposals("c_seed0003")) == before
+
+
+def test_proposal_requires_known_team(client):
+    r = client.post(
+        "/tasks/c_seed0003/proposals",
+        data={"team_id": "", "idea": "Идея", "plan": "План"},
+    )
+    assert r.status_code == 200
+    assert "Выберите команду" in r.text
+
+
+def test_business_decides_manually_each_proposal(client):
+    """Кейс: бизнес выбирает одну, несколько или ни одной команды."""
+    from app.store import get_store
+
+    store = get_store()
+    for team in ("t_seed0001", "t_seed0002"):
+        client.post(
+            "/tasks/c_seed0005/proposals",
+            data={"team_id": team, "idea": f"Идея от {team}", "plan": "План работ на месяц"},
+            follow_redirects=False,
+        )
+    first, second = store.list_proposals("c_seed0005")
+
+    r = client.post(f"/proposals/{first.id}/decision", data={"decision": "accept"}, follow_redirects=False)
+    assert r.status_code == 303
+    # Решение по одному отклику не трогает остальные.
+    assert store.get_proposal(first.id).status == "accepted"
+    assert store.get_proposal(second.id).status == "pending"
+
+    client.post(f"/proposals/{second.id}/decision", data={"decision": "accept"}, follow_redirects=False)
+    assert store.get_proposal(second.id).status == "accepted"  # можно принять несколько
+
+
+def test_decision_is_not_overwritten_and_rejects_garbage(client):
+    from app.store import get_store
+
+    store = get_store()
+    client.post(
+        "/tasks/c_seed0005/proposals",
+        data={"team_id": "t_seed0003", "idea": "Идея", "plan": "План работ"},
+        follow_redirects=False,
+    )
+    proposal = store.list_proposals("c_seed0005")[-1]
+
+    client.post(f"/proposals/{proposal.id}/decision", data={"decision": "reject"}, follow_redirects=False)
+    assert store.get_proposal(proposal.id).status == "rejected"
+
+    r = client.post(f"/proposals/{proposal.id}/decision", data={"decision": "accept"})
+    assert r.status_code == 200
+    assert "решение уже принято" in r.text
+    assert store.get_proposal(proposal.id).status == "rejected"
+
+    r = client.post(f"/proposals/{proposal.id}/decision", data={"decision": "чтототакое"})
+    assert r.status_code == 200
+    assert "Неизвестное действие" in r.text
+
+
+def test_decision_on_unknown_proposal_404(client):
+    assert client.post("/proposals/нет/decision", data={"decision": "accept"}).status_code == 404

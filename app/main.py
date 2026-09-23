@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from app import ai
 from app.models import INDUSTRIES, LEVEL_LABELS
 from app.store import get_store
+from app.web_catalog import router as catalog_router
 
 BASE_DIR = Path(__file__).parent
 
@@ -21,6 +22,9 @@ app = FastAPI(title="AI Sana Challenge Hub", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.globals.update(INDUSTRIES=INDUSTRIES, LEVEL_LABELS=LEVEL_LABELS)
+
+# Каталог и страница задачи живут в своём модуле (HAC-12, HAC-13).
+app.include_router(catalog_router)
 
 
 @app.get("/health")

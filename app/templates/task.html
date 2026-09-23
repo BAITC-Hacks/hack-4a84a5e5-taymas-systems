@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ card.title or "Задача" }} — AI Sana Challenge Hub{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/catalog.css">
+
+<p class="breadcrumb"><a href="/catalog">← Каталог задач</a></p>
+
+<header class="task-head">
+  <div>
+    <h1>{{ card.title or "Без названия" }}</h1>
+    <div class="task-meta">
+      <span class="industry">{{ card.industry }}</span>
+      <span class="badge badge-{{ card.level }}">{{ card.level_label }}</span>
+      {% if card.status != "published" %}<span class="warn">не опубликована</span>{% endif %}
+      {% if not card.confirmed %}<span class="warn">есть неподтверждённые правки</span>{% endif %}
+    </div>
+  </div>
+  <div class="score big" title="Подтверждённый рейтинг готовности">{{ card.score }}<span>/100</span></div>
+</header>
+
+<p class="edit-link"><a href="/business/cards/{{ card.id }}/edit">Редактировать карточку (представитель бизнеса)</a></p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<section>
+  <h2>Карточка задачи</h2>
+  <dl class="card-fields">
+    {% for key, label in FIELD_LABELS.items() %}
+    {% if key != "title" %}
+    <dt>{{ label }}</dt>
+    <dd>{{ card[key] or "— не заполнено" }}</dd>
+    {% endif %}
+    {% endfor %}
+  </dl>
+</section>
+
+<section>
+  <h2>Из чего складывается рейтинг</h2>
+  <table class="rating-table">
+    <thead><tr><th>Показатель</th><th>Начислено</th><th>Что добавить</th></tr></thead>
+    <tbody>
+      {% for item in rating.items %}
+      <tr>
+        <td>{{ item.label }}</td>
+        <td class="num">{{ item.awarded }} из {{ item.weight }}</td>
+        <td class="hint">{{ item.hint or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr><th>Итого</th><th class="num">{{ rating.score }} из 100</th><th>{{ rating.level_label }}</th></tr></tfoot>
+  </table>
+  {% if rating.missing %}
+  <p class="missing"><strong>Не хватает сведений:</strong></p>
+  <ul class="missing-list">{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+<section id="proposals">
+  <h2>Отклики команд <span class="count">{{ proposals|length }}</span></h2>
+  {% if proposals %}
+  <ul class="proposals">
+    {% for proposal, team in proposals %}
+    <li class="proposal status-{{ proposal.status }}">
+      <div class="proposal-head">
+        <strong>{{ team.name if team else proposal.team_id }}</strong>
+        <span class="badge badge-{{ proposal.status }}">{{ status_labels[proposal.status] }}</span>
+        <span class="date">{{ proposal.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+      </div>
+      <p><strong>Идея:</strong> {{ proposal.idea }}</p>
+      <p><strong>План:</strong> {{ proposal.plan }}</p>
+      {% if proposal.deadline %}<p><strong>Срок:</strong> {{ proposal.deadline }}</p>{% endif %}
+      {% if proposal.link %}<p><strong>Прототип:</strong> <a href="{{ proposal.link }}" rel="noreferrer noopener">{{ proposal.link }}</a></p>{% endif %}
+      {% if proposal.status == "pending" %}
+      <form class="decision" method="post" action="/proposals/{{ proposal.id }}/decision">
+        <button type="submit" name="decision" value="accept" class="primary">Выбрать команду</button>
+        <button type="submit" name="decision" value="reject">Отклонить</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">Откликов пока нет. Задача открыта для всех команд.</p>
+  {% endif %}
+  <p class="note">Команду выбирает представитель бизнеса. Система не назначает исполнителей автоматически
+  и не ограничивает число откликов.</p>
+</section>
+
+<section>
+  <h2>Откликнуться на задачу</h2>
+  <form class="proposal-form" method="post" action="/tasks/{{ card.id }}/proposals">
+    <label>
+      Команда
+      <select name="team_id" required>
+        <option value="">— выберите команду —</option>
+        {% for team in teams %}
+        <option value="{{ team.id }}" {% if form.get("team_id") == team.id %}selected{% endif %}>
+          {{ team.name }} — {{ team.skills|join(", ") }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Идея решения
+      <textarea name="idea" rows="3" required placeholder="Что предлагаете сделать">{{ form.get("idea", "") }}</textarea>
+    </label>
+    <label>
+      План работ
+      <textarea name="plan" rows="3" required placeholder="Этапы и что получится на каждом">{{ form.get("plan", "") }}</textarea>
+    </label>
+    <div class="row">
+      <label>Срок<input type="text" name="deadline" placeholder="например, 3 недели" value="{{ form.get('deadline', '') }}"></label>
+      <label>Ссылка на прототип<input type="url" name="link" placeholder="https://" value="{{ form.get('link', '') }}"></label>
+    </div>
+    <button type="submit" class="primary">Отправить отклик</button>
+  </form>
+</section>
+{% endblock %}
