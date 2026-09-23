@@ -7,9 +7,32 @@
   {% if card.status == "published" %}Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.{% endif %}
 </p>
 
-{% if message %}<p class="notice info">{{ message }}</p>{% endif %}
+{% if change %}
+{% set delta = change.after - change.before %}
+<section class="score-change {% if delta > 0 %}up{% elif delta < 0 %}down{% else %}same{% endif %}">
+  <div>
+    <div class="score-change-label">Предварительный рейтинг пересчитан: было {{ change.before }} → стало {{ change.after }}</div>
+    <div class="score-change-values">
+      <span class="old">{{ change.before }}</span>
+      <span class="arrow">→</span>
+      <span class="new">{{ change.after }}</span>
+      <span class="delta">{% if delta > 0 %}+{% endif %}{{ delta }}</span>
+      <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
+    </div>
+  </div>
+  <div class="score-change-confirmed">
+    <div class="muted small">Подтверждённый балл</div>
+    {% if card.status == "published" %}
+    <div class="confirmed-value">{{ card.score }} <span class="level-badge lvl-{{ card.level }}">{{ card.level_label }}</span></div>
+    {% else %}
+    <div class="confirmed-value">—</div>
+    {% endif %}
+  </div>
+  {% if message %}<p class="score-change-note">{{ message }}</p>{% endif %}
+</section>
+{% elif message %}<p class="notice info">{{ message }}</p>{% endif %}
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-{% if card.answers and card.status != "published" %}
+{% if card.answers and card.status != "published" and not change %}
 <p class="notice {% if answered == 0 %}warn{% else %}info{% endif %}">
   Из ответов на уточняющие вопросы заполнено полей: {{ answered }} из {{ card.answers|length }}.
   {% if answered == 0 %}Вопросы пропущены — карточка собрана только из черновика, дополните её вручную.{% endif %}
@@ -85,8 +108,10 @@
     </table>
 
     {% if rating.missing %}
-    <h3>Недостающие сведения</h3>
-    <ol class="missing">{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ol>
+    <div class="missing-box">
+      <h3>Что добавить, чтобы поднять рейтинг</h3>
+      <ol class="missing">{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ol>
+    </div>
     {% else %}
     <p class="notice info">Все сведения заполнены.</p>
     {% endif %}

@@ -153,7 +153,16 @@ def _get_card_or_404(card_id: str) -> Card:
     return card
 
 
-def _editor(request: Request, card: Card, *, message: str = "", error: str = "", form_card: Card | None = None, errors: dict | None = None):
+def _editor(
+    request: Request,
+    card: Card,
+    *,
+    message: str = "",
+    error: str = "",
+    form_card: Card | None = None,
+    errors: dict | None = None,
+    change: dict | None = None,
+):
     """form_card — то, что показывать в полях (введённое при ошибке), card — сохранённая версия для рейтинга."""
     return _page(
         request,
@@ -168,6 +177,7 @@ def _editor(request: Request, card: Card, *, message: str = "", error: str = "",
             "message": message,
             "error": error,
             "errors": errors or {},
+            "change": change,
         },
         status_code=400 if errors else 200,
     )
@@ -234,8 +244,7 @@ async def update_card(request: Request, card_id: str):
     card.confirmed = False
     get_store().update_card(card)
     after = compute_rating(card).score
-    message = f"Предварительный рейтинг пересчитан: было {before} → стало {after}. {_confirmed_note(card)}"
-    return _editor(request, card, message=message)
+    return _editor(request, card, message=_confirmed_note(card), change={"before": before, "after": after})
 
 
 @app.post("/business/cards/{card_id}/publish", response_class=HTMLResponse)
