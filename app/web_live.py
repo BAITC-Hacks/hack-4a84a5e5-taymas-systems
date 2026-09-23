@@ -13,8 +13,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 
 from app.models import INDUSTRIES, LEVEL_LABELS
-from app.rating import compute_rating
 from app.store import get_store
+from app.trial import trial_badge
 
 router = APIRouter()
 
@@ -25,9 +25,8 @@ def _clean_choice(value: str | None, allowed) -> str:
 
 
 def _trial_passed(card) -> bool:
-    """Знак «прошла испытание» действителен, пока карточку не правили после испытания (HAC-56)."""
-    trial = getattr(card, "trial", None)
-    return bool(trial and trial.passed and trial.score_at == compute_rating(card).score)
+    """Знак «прошла испытание» — тот же, что в HTML-каталоге (app/trial.py, HAC-56)."""
+    return trial_badge(card)
 
 
 @router.get("/catalog.json")
@@ -60,3 +59,33 @@ def catalog_json(industry: str = "", level: str = "") -> dict:
         "total": len(published),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/feed.json")
+def feed_json() -> dict:
+    """Последние события опубликованных задач; только существующие отметки времени."""
+    store = get_store()
+    events = []
+
+    def event(at, kind, text, card_id):
+        # Старые сиды могли содержать даты без часового пояса.
+        at = at.replace(tzinfo=timezone.utc) if at.tzinfo is None else at
+        events.append({"at": at.astimezone(timezone.utc).isoformat(), "kind": kind,
+                       "text": text, "card_id": card_id})
+
+    published = {c.id: c for c in store.list_cards()}
+    for card in published.values():
+        if card.published_at:
+            event(card.published_at, "published", f'Опубликована задача «{card.title or "Без названия"}»', card.id)
+    for proposal in list(store.proposals.values()):
+        card = published.get(proposal.card_id)
+        if not card:
+            continue
+        team = store.get_team(proposal.team_id)
+        name = team.name if team else "Команда"
+        event(proposal.created_at, "proposal", f'{name}: отклик на «{card.title}»', card.id)
+        if proposal.decided_at and proposal.status in {"accepted", "rejected"}:
+            decision = "принят" if proposal.status == "accepted" else "отклонён"
+            event(proposal.decided_at, "decision", f'Отклик {name} на «{card.title}» {decision} бизнесом', card.id)
+    events.sort(key=lambda e: e["at"], reverse=True)
+    return {"events": events[:10]}

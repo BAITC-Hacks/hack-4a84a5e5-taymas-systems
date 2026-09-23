@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Испытание задачи — {{ card.title or "Задача" }}{% endblock %}
+{% block content %}
+<style>
+  .trial-page { display: grid; gap: 18px; max-width: 1000px; }
+  .trial-crumbs { display: flex; gap: 16px; flex-wrap: wrap; margin: 0; font-size: 14px; }
+  .trial-crumbs a { color: var(--muted); text-decoration: none; font-weight: 700; }
+  .trial-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .trial-head h1 { margin: 10px 0 8px; }
+  .trial-head .muted { margin: 0; max-width: 64ch; }
+  .trial-card { padding: 20px 22px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+  .trial-card h2 { margin: 0 0 12px; }
+  .trial-score { display: flex; align-items: center; gap: 14px; }
+  .trial-score b { font: 900 36px/1 var(--display); }
+  .trial-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .trial-form label { display: grid; gap: 6px; font-weight: 800; font-size: 14px; flex: 1 1 320px; }
+  .verdict { display: grid; gap: 8px; padding: 22px 24px; border-radius: var(--r-m); animation: in .6s var(--spring) both; }
+  .verdict.pass { background: color-mix(in srgb, var(--good) 22%, var(--surface)); box-shadow: inset 0 0 0 2px var(--good); }
+  .verdict.fail { background: color-mix(in srgb, var(--bad) 18%, var(--surface)); box-shadow: inset 0 0 0 2px var(--bad); }
+  .verdict-title { font: 900 30px/1.1 var(--display); }
+  .verdict p { margin: 0; font-size: 16px; }
+  .verdict-meta { color: var(--muted); font-size: 13px; }
+  .trial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .plan { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+  .plan li::marker { font: 900 14px var(--display); color: var(--accent); }
+  .plan li.blocked { color: var(--bad); font-weight: 800; }
+  .plan li.blocked::marker { color: var(--bad); }
+  .gaps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .gaps li { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--r-s); background: var(--field); box-shadow: inset 0 0 0 1px var(--line); }
+  .gap-head { display: flex; justify-content: space-between; gap: 10px; font-weight: 800; }
+  .gain { padding: 3px 10px; border-radius: 999px; background: var(--good); color: #05180f; font: 800 12px/1.4 var(--body); white-space: nowrap; }
+  .gaps.risk .gain { background: var(--warn); color: #1d1300; }
+  .gaps h3 { margin: 6px 0 0; }
+  .next-step { display: flex; gap: 14px; align-items: center; margin: 0; padding: 16px 20px; border-radius: var(--r-m); background: var(--accent); color: var(--accent-ink); font-weight: 800; box-shadow: 0 12px 30px var(--glow); }
+  .next-step .arr { font: 900 22px/1 var(--display); }
+  .stale { margin: 0; padding: 12px 16px; border-radius: var(--r-s); background: color-mix(in srgb, var(--warn) 22%, var(--surface)); box-shadow: inset 0 0 0 1px var(--warn); font-weight: 600; }
+  .trial-note { margin: 0; color: var(--muted); font-size: 13px; max-width: 90ch; }
+</style>
+<div class="trial-page">
+  <p class="trial-crumbs">
+    <a href="/business/cards/{{ card.id }}/edit">← Редактор карточки</a>
+    {% if card.status == "published" %}<a href="/tasks/{{ card.id }}">Страница задачи в каталоге →</a>{% endif %}
+  </p>
+
+  <header class="trial-head">
+    <div>
+      <span class="eyebrow">Испытание задачи</span>
+      <h1>{{ card.title or "Без названия" }}</h1>
+      <p class="muted">Виртуальная студенческая команда пробует взять задачу, зная только то, что написано в карточке.
+      Баллы за это не начисляются: рейтинг считается только за подтверждённые поля.</p>
+    </div>
+    <div class="trial-card trial-score">
+      <div><div class="muted small">Предварительный балл</div><b>{{ rating.score }}</b> <span class="muted">/ 100</span></div>
+      <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
+    </div>
+  </header>
+
+  {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+
+  <form class="trial-card trial-form" method="post" action="/business/cards/{{ card.id }}/trial">
+    <label>В роли команды
+      <select name="team_id">
+        {% for team in teams %}
+        <option value="{{ team.id }}" {% if trial and trial.team_id == team.id %}selected{% endif %}>{{ team.name }} — {{ team.skills|join(", ") }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">{% if trial %}Повторить испытание{% else %}Проверить глазами команды{% endif %}</button>
+  </form>
+
+  {% if trial %}
+    {% if not current %}
+    <p class="stale">Карточку правили после испытания: было {{ trial.score_at }}, сейчас {{ rating.score }}. Результат ниже устарел — запустите испытание заново.</p>
+    {% endif %}
+
+    <section class="verdict {% if trial.passed %}pass{% else %}fail{% endif %}">
+      <div class="verdict-title">{% if trial.passed %}Выдержала{% else %}Не выдержала{% endif %}</div>
+      <p>{{ trial.verdict }}</p>
+      <div class="verdict-meta">Команда {{ trial.team_name }} · {{ trial.created_at.strftime("%d.%m.%Y %H:%M") }} · балл на момент испытания {{ trial.score_at }} · режим: {% if trial.mode == "stub" %}локальная заглушка без модели{% else %}модель {{ trial.mode }}{% endif %}</div>
+    </section>
+
+    <div class="trial-grid">
+      <section class="trial-card">
+        <h2>План первой недели по карточке</h2>
+        <ol class="plan">
+          {% for step in trial.steps %}<li {% if step.blocked %}class="blocked"{% endif %}>{{ step.text }}</li>{% endfor %}
+        </ol>
+      </section>
+      <section class="trial-card">
+        <h2>Блокеры и их цена {% if trial.blockers %}<span class="muted">{{ trial.blockers|length }}</span>{% endif %}</h2>
+        {% if trial.blockers %}
+        <ul class="gaps">
+          {% for item in trial.blockers %}
+          <li><div class="gap-head"><span>{{ item.label }}</span><span class="gain">+{{ item.gain }}</span></div><span>{{ item.reason }}</span></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">Блокеров нет: команде есть с чего начать.</p>
+        {% endif %}
+        {% if trial.risks %}
+        <ul class="gaps risk">
+          <h3>Риски</h3>
+          {% for item in trial.risks %}
+          <li><div class="gap-head"><span>{{ item.label }}</span><span class="gain">+{{ item.gain }}</span></div><span>{{ item.reason }}</span></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+    </div>
+
+    <p class="next-step"><span class="arr">→</span><span>{{ trial.next_step }}</span></p>
+  {% endif %}
+
+  <p class="trial-note">ИИ не добавляет фактов: план и причины строятся только из карточки, а ответ модели с числами, которых в карточке нет, отбрасывается целиком. Без ключа API работает локальная заглушка — с теми же блокерами, вердиктом и цитатами из карточки.</p>
+</div>
+{% endblock %}

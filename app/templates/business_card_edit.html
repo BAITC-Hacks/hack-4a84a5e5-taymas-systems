@@ -70,7 +70,7 @@
         {% if errors.industry %}<span class="field-error">{{ errors.industry }}</span>{% endif %}
       </label>
 
-      <div class="form-actions"><button type="submit" class="btn-ghost">Сохранить и пересчитать</button></div>
+      <div class="form-actions"><button type="submit" class="btn-ghost">Сохранить и пересчитать</button><a class="trial-link" href="/business/cards/{{ card.id }}/trial" style="align-self: center; font-weight: 800;">Проверить глазами команды →</a></div>
 
       <fieldset class="confirm-box">
         <legend>{% if published %}Подтверждение изменений{% else %}Готово? Подтвердите — и в каталог{% endif %}</legend>

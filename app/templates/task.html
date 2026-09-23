@@ -13,6 +13,7 @@
       <span class="badge badge-{{ card.level }}">{{ card.level_label }}</span>
       {% if card.status != "published" %}<span class="warn">не опубликована</span>{% endif %}
       {% if not card.confirmed %}<span class="warn">есть неподтверждённые правки</span>{% endif %}
+      {% if trial_badge(card) %}<span class="trial-mark">прошла испытание командой {{ card.trial.team_name }}</span>{% endif %}
     </div>
   </div>
   <div class="score-block">
@@ -25,7 +26,7 @@
   </div>
 </header>
 
-<p class="edit-link"><a href="/business/cards/{{ card.id }}/edit">Редактировать карточку (представитель бизнеса)</a></p>
+<p class="edit-link"><a href="/business/cards/{{ card.id }}/edit">Редактировать карточку (представитель бизнеса)</a> · <a href="/business/cards/{{ card.id }}/trial">Испытание задачи</a></p>
 
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
