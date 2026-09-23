@@ -128,6 +128,13 @@ def _task_context(request: Request, card_id: str, *, error: str = "", form: dict
     # Показываем эту позицию там, где пользователь оказывается сразу после публикации.
     published = store.list_cards()
     position = next((i + 1 for i, c in enumerate(published) if c.id == card.id), None)
+    # Обратная сторона рекомендаций (HAC-26): бизнесу показываем, каким командам задача подходит по профилю.
+    # Те же правила: только с уровня «Рабочая» (score >= 40), система подсказывает, а не назначает.
+    fitting_teams = []
+    for team in store.list_teams():
+        matched = recommend_tasks(team, [card], limit=1)
+        if matched:
+            fitting_teams.append((team, matched[0][1]))
     return {
         "request": request,
         "card": card,
@@ -139,6 +146,7 @@ def _task_context(request: Request, card_id: str, *, error: str = "", form: dict
         "status_labels": PROPOSAL_STATUS_LABELS,
         "error": error,
         "form": form or {},
+        "fitting_teams": fitting_teams,
         "ai_mode": ai.ai_mode(),
     }
 

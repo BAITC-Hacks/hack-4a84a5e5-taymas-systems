@@ -111,10 +111,22 @@ def health() -> dict:
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     store = get_store()
+    cards = store.list_cards()
+    # «Ищут команду» — опубликованные задачи, у которых бизнес ещё никого не выбрал.
+    # Кейс разрешает выбрать одну, несколько или ни одной команды — «принято» и есть выбор.
+    accepted_card_ids = {p.card_id for p in store.proposals.values() if p.status == "accepted"}
+    seeking_team = sum(1 for c in cards if c.id not in accepted_card_ids)
+    avg_score = round(sum(c.score for c in cards) / len(cards)) if cards else 0
     return templates.TemplateResponse(
         request,
         "index.html",
-        {"published": len(store.list_cards()), "teams": len(store.list_teams()), "ai_mode": ai.ai_mode()},
+        {
+            "published": len(cards),
+            "teams": len(store.list_teams()),
+            "ai_mode": ai.ai_mode(),
+            "avg_score": avg_score,
+            "seeking_team": seeking_team,
+        },
     )
 # Подсказки полей — из колонки «Как считать» раздела 4 ТЗ.
 FIELD_PLACEHOLDERS = {

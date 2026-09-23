@@ -299,3 +299,17 @@ def test_catalog_shows_proposal_counts(client):
         follow_redirects=False,
     )
     assert "откликов: 1" in client.get("/catalog").text
+
+
+def test_task_page_lists_fitting_teams_for_business(client):
+    page = client.get("/tasks/c_seed0001")  # Образование, 100 баллов
+    assert page.status_code == 200
+    assert "Подходящие команды" in page.text
+    assert "DataBee" in page.text  # интерес «образование» совпадает с отраслью задачи
+    assert "выбирает бизнес вручную" in page.text
+
+
+def test_task_page_hides_fitting_teams_for_draft(client):
+    page = client.get("/tasks/c_seed0005")  # Финансы, 20 баллов — черновик
+    assert page.status_code == 200
+    assert "Рекомендации открываются с уровня «Рабочая»" in page.text
