@@ -89,23 +89,15 @@
     el.addEventListener("input", () => el.closest(".field").classList.toggle("dirty", el.value !== initial));
   });
 
-  // Подсветка за курсором и глаза маскота
+  // Мягкая подсветка карточки балла за курсором
   const card = document.getElementById("gauge-card");
-  const eyes = document.querySelectorAll(".mascot .eye");
-  if (!reduce) addEventListener("pointermove", e => {
-    if (card) {
+  if (card && !reduce) card.addEventListener("pointermove", e => {
       const r = card.getBoundingClientRect();
       card.style.setProperty("--mx", `${e.clientX - r.left}px`);
       card.style.setProperty("--my", `${e.clientY - r.top}px`);
-    }
-    eyes.forEach(eye => {
-      const r = eye.ownerSVGElement.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const a = Math.atan2(e.clientY - cy, e.clientX - cx), d = Math.min(3.5, Math.hypot(e.clientX - cx, e.clientY - cy) / 60);
-      eye.setAttribute("transform", `translate(${Math.cos(a) * d} ${Math.sin(a) * d})`);
-    });
   });
 
-  // Подтверждение: магнитная кнопка, подсказка без галочки, конфетти перед отправкой
+  // Подтверждение: магнитная кнопка и подсказка, если не включён переключатель
   const toggle = document.getElementById("confirm-toggle"), btn = document.getElementById("publish-btn"), msg = document.getElementById("confirm-msg");
   if (!toggle || !btn) return;
   if (!reduce) {
@@ -116,19 +108,7 @@
     btn.addEventListener("pointerleave", () => { btn.style.transform = ""; });
   }
   toggle.addEventListener("change", () => { msg.textContent = ""; });
-  const burst = (x, y) => {
-    const colors = ["var(--accent)", "var(--pop)", "var(--pop-2)", "var(--good)", "var(--warn)"];
-    for (let i = 0; i < 70; i++) {
-      const c = document.createElement("i"), a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 320;
-      c.className = "confetti";
-      c.style.cssText = `left:${x}px;top:${y}px;background:${colors[i % colors.length]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 80 + Math.random() * 260}px;--r:${Math.random() * 720 - 360}deg;--t:${900 + Math.random() * 700}ms`;
-      document.body.appendChild(c);
-      setTimeout(() => c.remove(), 1700);
-    }
-  };
-  let sending = false;
   btn.addEventListener("click", e => {
-    if (sending) return;
     if (!toggle.checked) {
       e.preventDefault();
       msg.textContent = "Сначала включите «Подтверждаю, что карточка составлена верно» — без подтверждения баллы не начисляются.";
@@ -136,10 +116,97 @@
       sw.classList.remove("shake"); void sw.offsetWidth; sw.classList.add("shake");
       return;
     }
-    if (reduce) return;
-    e.preventDefault();
-    sending = true;
-    burst(e.clientX || innerWidth / 2, e.clientY || innerHeight / 2);
-    setTimeout(() => form.requestSubmit ? form.requestSubmit(btn) : btn.click(), 650);
   });
+})();
+
+// Выпадающие списки в стиле сайта поверх обычного <select>.
+// Сам <select> остаётся в форме и отправляет значение; без JS работает как раньше.
+(() => {
+  let open = null;
+  const close = (dd, focusBtn) => {
+    if (!dd) return;
+    dd.list.hidden = true;
+    dd.btn.setAttribute("aria-expanded", "false");
+    dd.box.classList.remove("open");
+    if (focusBtn) dd.btn.focus();
+    if (open === dd) open = null;
+  };
+
+  document.querySelectorAll("select:not([multiple])").forEach((select, n) => {
+    const box = document.createElement("div");
+    box.className = "dd";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dd-btn" + (select.classList.contains("invalid") ? " invalid" : "");
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    const list = document.createElement("ul");
+    list.className = "dd-list";
+    list.id = `dd-list-${n}`;
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    btn.setAttribute("aria-controls", list.id);
+
+    const items = [...select.options].map((opt, i) => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.tabIndex = -1;
+      li.textContent = opt.textContent.trim();
+      li.dataset.index = i;
+      list.appendChild(li);
+      return li;
+    });
+
+    const dd = { box, btn, list };
+    const sync = () => {
+      const opt = select.options[select.selectedIndex];
+      btn.textContent = opt ? opt.textContent.trim() : "";
+      btn.classList.toggle("placeholder", !!opt && opt.value === "");
+      items.forEach((li, i) => li.setAttribute("aria-selected", String(i === select.selectedIndex)));
+    };
+    const choose = i => {
+      if (select.selectedIndex !== i) {
+        select.selectedIndex = i;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      sync();
+      close(dd, true);
+    };
+    const openList = () => {
+      if (open && open !== dd) close(open);
+      list.hidden = false;
+      box.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+      open = dd;
+      (items[select.selectedIndex] || items[0])?.focus();
+    };
+
+    btn.addEventListener("click", () => (list.hidden ? openList() : close(dd, true)));
+    btn.addEventListener("keydown", e => {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) { e.preventDefault(); openList(); }
+    });
+    // preventDefault: список лежит внутри <label>, иначе клик по пункту снова «нажмёт» кнопку.
+    list.addEventListener("click", e => { e.preventDefault(); const li = e.target.closest("li"); if (li) choose(+li.dataset.index); });
+    list.addEventListener("keydown", e => {
+      const i = items.indexOf(document.activeElement);
+      const move = j => items[Math.max(0, Math.min(items.length - 1, j))].focus();
+      if (e.key === "ArrowDown") { e.preventDefault(); move(i + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); move(i - 1); }
+      else if (e.key === "Home") { e.preventDefault(); move(0); }
+      else if (e.key === "End") { e.preventDefault(); move(items.length - 1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (i >= 0) choose(i); }
+      else if (e.key === "Escape") { e.preventDefault(); close(dd, true); }
+      else if (e.key === "Tab") close(dd);
+    });
+
+    select.classList.add("dd-native");
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden", "true");
+    select.parentNode.insertBefore(box, select);
+    box.append(btn, list, select);
+    select.addEventListener("change", sync);
+    sync();
+  });
+
+  document.addEventListener("click", e => { if (open && !open.box.contains(e.target)) close(open); });
 })();

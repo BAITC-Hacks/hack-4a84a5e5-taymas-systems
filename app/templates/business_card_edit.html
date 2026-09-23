@@ -12,9 +12,9 @@
   <li class="{% if published %}{% if card.confirmed %}done{% else %}now{% endif %}{% endif %}" data-n="4">Подтверждение</li>
   <li class="{% if published %}done{% endif %}" data-n="5">Каталог</li>
 </ol>
-<h1>{% if next_at %}Прокачай карточку до уровня <em>«{{ next_label }}»</em>{% else %}Карточка на <em>максимуме</em>{% endif %}</h1>
+<h1>{% if next_at %}Доведите карточку до уровня <em>«{{ next_label }}»</em>{% else %}Карточка на <em>максимуме</em>{% endif %}</h1>
 <p class="lede">
-  Каждый показатель — наклейка. Дополните поле конкретикой и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.
+  Семь показателей рейтинга — плитки ниже. Дополните поле конкретикой и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.
   {% if published %}Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.{% endif %}
 </p>
 
@@ -106,19 +106,10 @@
         <div class="gauge-num"><span class="score-big" data-from="{{ from_score }}" data-to="{{ s }}">{{ s }}</span><span class="of">из 100</span></div>
         {% if change and change.after != change.before %}<span class="delta {% if change.after < change.before %}down{% endif %}">{% if change.after > change.before %}+{% endif %}{{ change.after - change.before }}</span>{% endif %}
       </div>
-      <div class="mascot-wrap">
-        <div class="mascot" aria-hidden="true">
-          <svg viewBox="0 0 48 48">
-            <ellipse class="eye" cx="16" cy="19" rx="4" ry="5"/><ellipse class="eye" cx="32" cy="19" rx="4" ry="5"/>
-            {% if rating.level == "priority" %}<path class="shades" d="M8 15h32v3c0 4-3 7-7 7s-7-3-7-6h-4c0 3-3 6-7 6s-7-3-7-7z"/>{% endif %}
-            {% if rating.level == "draft" %}<path class="mouth" d="M15 34 Q24 28 33 34"/>{% elif rating.level == "workable" %}<path class="mouth" d="M15 31 Q24 36 33 31"/>{% else %}<path class="mouth" d="M13 29 Q24 41 35 29"/>{% endif %}
-          </svg>
-        </div>
-        <p class="bubble">
-          {% if next_at %}Ещё <b>{{ next_at - s }}</b> {{ "балл" if (next_at - s) % 10 == 1 and (next_at - s) != 11 else ("балла" if (next_at - s) % 10 in [2, 3, 4] and (next_at - s) not in [12, 13, 14] else "баллов") }} — и уровень «{{ next_label }}»!
-          {% else %}Максимальный уровень — задача выделяется в каталоге.{% endif %}
-        </p>
-      </div>
+      <p class="next-level">
+          {% if next_at %}Осталось <b>{{ next_at - s }}</b> {{ "балл" if (next_at - s) % 10 == 1 and (next_at - s) != 11 else ("балла" if (next_at - s) % 10 in [2, 3, 4] and (next_at - s) not in [12, 13, 14] else "баллов") }} до уровня «{{ next_label }}».
+          {% else %}Максимальный уровень: задача выделяется в каталоге.{% endif %}
+      </p>
       <div class="gauge-foot">
         {% if change %}<span>Было <b class="was">{{ change.before }}</b></span>{% endif %}
         <span>Подтверждено <b>{% if published %}{{ card.score }}{% else %}—{% endif %}</b></span>
