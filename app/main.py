@@ -21,6 +21,8 @@ from app.rating import SCALE, compute_rating
 from app.store import get_store
 from app.web_catalog import router as catalog_router
 from app.web_catalog import templates as catalog_templates
+from app.web_live import router as live_router
+from app.web_trial import router as trial_router
 
 BASE_DIR = Path(__file__).parent
 
@@ -31,6 +33,10 @@ templates.env.globals.update(INDUSTRIES=INDUSTRIES, LEVEL_LABELS=LEVEL_LABELS)
 
 # Каталог и страница задачи живут в своём модуле (HAC-12, HAC-13).
 app.include_router(catalog_router)
+# Живой каталог — JSON для клиента (HAC-57) и испытание задачи (HAC-56): отдельные роутеры,
+# чтобы надстройки не пересекались по файлам ни между собой, ни с редизайном поверхности.
+app.include_router(live_router)
+app.include_router(trial_router)
 
 _PROVIDER_NAMES = {"openai": "OpenAI", "nvidia": "NVIDIA"}
 

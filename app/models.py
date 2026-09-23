@@ -92,6 +92,47 @@ class Answer(BaseModel):
     answer: str
 
 
+class TrialStep(BaseModel):
+    """Шаг плана первой недели виртуальной команды. blocked=True — здесь команда останавливается."""
+
+    text: str
+    blocked: bool = False
+
+
+class TrialBlocker(BaseModel):
+    """Показатель рейтинга с недобором: блокер (без него не начать) или риск (начать можно, но опасно).
+
+    key — ключ показателя из app.rating.SCALE, gain — сколько баллов даст его закрытие.
+    """
+
+    key: str
+    label: str
+    reason: str
+    gain: int
+
+
+class Trial(BaseModel):
+    """Результат испытания карточки виртуальной командой (HAC-56).
+
+    Вердикт и состав блокеров детерминированы (см. app/trial.py), тексты шагов и причин
+    пишет модель или заглушка. score_at — предварительный балл карточки в момент испытания:
+    если карточку потом правили, испытание считается устаревшим и знак в каталоге не показывается.
+    Баллы за испытание не начисляются: рейтинг — только за подтверждённые поля (ТЗ, раздел 4).
+    """
+
+    team_id: str
+    team_name: str
+    passed: bool
+    verdict: str
+    steps: list[TrialStep] = Field(default_factory=list)
+    blockers: list[TrialBlocker] = Field(default_factory=list)
+    risks: list[TrialBlocker] = Field(default_factory=list)
+    next_step: str = ""
+    score_at: int = 0
+    mode: str = "stub"
+    created_at: datetime = Field(default_factory=now)
+
+
 class CardFields(BaseModel):
     """Только содержательные поля карточки. По ним считается рейтинг."""
 
@@ -125,6 +166,7 @@ class Card(CardFields):
     answers: list[Answer] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=now)
     published_at: datetime | None = None
+    trial: Trial | None = None  # последнее испытание виртуальной командой (HAC-56)
 
     @property
     def level_label(self) -> str:
