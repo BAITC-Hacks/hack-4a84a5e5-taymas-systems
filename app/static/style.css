@@ -641,3 +641,8 @@ body .fit-list strong { font: 700 17px/1.2 var(--display); color: var(--text); }
 body .fit-skills { margin: 0; font: 500 12px/1.4 var(--mono); color: var(--accent); }
 body .fit-list p { margin: 4px 0 0; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 13px; line-height: 1.5; color: var(--muted); }
 body .fit-list p::before { content: "Почему подходит: "; color: var(--text); font-weight: 700; }
+
+/* Каталог: кнопки и списки в фильтрах одной высоты */
+body form.filters button { height: 48px; padding-block: 0; white-space: nowrap; }
+body form.filters .dd > .dd-btn { height: 48px; padding-block: 0; }
+body form.filters .reset { align-self: center; padding: 0; margin-top: 22px; }
