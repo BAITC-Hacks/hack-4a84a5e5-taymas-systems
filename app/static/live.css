@@ -1,0 +1,17 @@
+.live-feed:not(:empty), .live-level-up { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: var(--r-m, 22px); background: var(--surface); }
+.live-feed h2 { margin-top: 0; }
+.live-feed ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.live-feed li { display: flex; gap: 14px; align-items: baseline; }
+.live-feed time { color: var(--muted); white-space: nowrap; font-size: 12px; }
+.live-feed a { text-decoration: none; }
+.live-feed a:hover { color: var(--accent); }
+.live-toast { position: fixed; bottom: 24px; right: 24px; max-width: min(420px, calc(100vw - 48px)); z-index: 50; border: 1px solid var(--accent); border-radius: var(--r-s, 14px); background: var(--surface); color: var(--text); padding: 16px 22px; pointer-events: none; }
+.live-risen { animation: live-rise 1.5s ease-out; }
+.live-level-up { position: relative; overflow: hidden; color: var(--good); font-weight: 800; }
+.live-particle { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; background: var(--accent); animation: live-particle .9s ease-out both; }
+.live-particle:nth-child(even) { background: var(--pop); }
+.live-position { color: var(--accent); font-weight: 700; font-size: 14px; }
+.live-state { color: var(--muted); font-size: 12px; }
+@keyframes live-rise { from { box-shadow: inset 0 0 0 2px var(--accent); } to { box-shadow: inset 0 0 0 0 transparent; } }
+@keyframes live-particle { to { transform: translate(var(--dx), var(--dy)) rotate(160deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .live-risen, .live-particle { animation: none; } .live-particle { display: none; } }
