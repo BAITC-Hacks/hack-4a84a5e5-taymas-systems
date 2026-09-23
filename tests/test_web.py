@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 
@@ -280,3 +282,37 @@ def test_footer_shows_stub_after_llm_call_failure(tmp_path, monkeypatch):
     assert "answer_0" in questions.text
     assert "режим ИИ: заглушка (OpenAI недоступен:" in questions.text
     assert "режим ИИ: заглушка (OpenAI недоступен:" in client.get("/catalog").text
+
+
+def _published_ids(store):
+    return [c.id for c in store.list_cards()]
+
+
+def test_catalog_team_recommendations_block_does_not_narrow_catalog(tmp_path):
+    store, client = _client(tmp_path)
+    team = store.get_team("t_seed0001")
+
+    page = client.get("/catalog", params={"team": team.id}).text
+    assert f"Подходит команде {team.name}" in page
+    reasons = re.findall(r'<p class="rec-reason">([^<]+)</p>', page)
+    assert reasons and all(r.strip() for r in reasons)
+    for card_id in _published_ids(store):
+        assert f'/tasks/{card_id}"' in page.split('class="filters"', 2)[-1]
+    assert "Рекомендации не ограничивают каталог" in page
+
+
+def test_catalog_unknown_team_is_ignored(tmp_path):
+    store, client = _client(tmp_path)
+
+    response = client.get("/catalog", params={"team": "мусор"})
+    assert response.status_code == 200
+    assert "Подходит команде" not in response.text
+    assert len(re.findall(r'<li class="task-row', response.text)) == len(_published_ids(store))
+
+
+def test_catalog_without_team_has_no_recommendations(tmp_path):
+    _, client = _client(tmp_path)
+
+    page = client.get("/catalog").text
+    assert "Подходит команде" not in page
+    assert 'name="team"' in page

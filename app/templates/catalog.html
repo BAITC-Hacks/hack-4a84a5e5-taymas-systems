@@ -7,7 +7,43 @@
 <p class="lead">Все опубликованные задачи доступны всем командам и отсортированы по рейтингу готовности.
 Низкий рейтинг задачу не скрывает — он только показывает, что её стоит уточнить.</p>
 
+<form class="filters team-picker" method="get" action="/catalog">
+  <label>
+    Я команда
+    <select name="team">
+      <option value="">— выберите команду —</option>
+      {% for t in teams %}
+      <option value="{{ t.id }}" {% if selected_team and t.id == selected_team.id %}selected{% endif %}>{{ t.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if industry %}<input type="hidden" name="industry" value="{{ industry }}">{% endif %}
+  {% if level %}<input type="hidden" name="level" value="{{ level }}">{% endif %}
+  <button type="submit">Показать подходящие</button>
+</form>
+
+{% if selected_team %}
+<section class="recommendations">
+  <h2>Подходит команде {{ selected_team.name }}</h2>
+  {% if recommendations %}
+  <ol class="rec-list">
+    {% for card, reason in recommendations %}
+    <li class="rec-card level-{{ card.level }}">
+      <a class="rec-title" href="/tasks/{{ card.id }}">{{ card.title }}</a>
+      <span class="rec-score">{{ card.score }} / 100 · <span class="badge badge-{{ card.level }}">{{ card.level_label }}</span></span>
+      <p class="rec-reason">{{ reason }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+  <p class="rec-note">Рекомендации не ограничивают каталог — ниже все опубликованные задачи.</p>
+  {% else %}
+  <p class="rec-note">Для этой команды пока нет подходящих задач. Весь каталог ниже.</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <form class="filters" method="get" action="/catalog">
+  {% if selected_team %}<input type="hidden" name="team" value="{{ selected_team.id }}">{% endif %}
   <label>
     Тема
     <select name="industry">

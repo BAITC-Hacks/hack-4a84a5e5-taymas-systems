@@ -90,3 +90,14 @@
 @media (max-width: 640px) {
   .task-head, .proposal-form .row { flex-direction: column; grid-template-columns: 1fr; }
 }
+
+/* Рекомендации команде (HAC-52) */
+.team-picker { margin-bottom: 12px; }
+.recommendations { background: #f7faff; border: 2px solid var(--accent); border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; }
+.recommendations h2 { margin: 0 0 12px; font-size: 18px; }
+.rec-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.rec-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.rec-title { font-weight: 700; color: var(--accent); text-decoration: none; }
+.rec-score { font-size: 13px; color: var(--muted); }
+.rec-reason { margin: 0; font-size: 14px; }
+.rec-note { margin: 12px 0 0; font-size: 13px; color: var(--muted); }

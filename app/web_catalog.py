@@ -5,7 +5,7 @@
 Подключается одной строкой в `app/main.py`.
 
 Маршруты — по таблице «Маршруты веба» в BRIEF.md:
-    GET  /catalog?industry=&level=      каталог, сортировка по рейтингу, фильтры
+    GET  /catalog?industry=&level=&team=  каталог, сортировка по рейтингу, фильтры, рекомендации команде
     GET  /tasks/{card_id}               карточка, расшифровка рейтинга, отклики
     POST /tasks/{card_id}/proposals     отклик команды
     POST /proposals/{proposal_id}/decision  ручное решение бизнеса
@@ -32,6 +32,7 @@ from app.models import (
     new_id,
 )
 from app.rating import compute_rating
+from app.recommend import recommend_tasks
 from app.store import get_store
 
 BASE_DIR = Path(__file__).parent
@@ -79,12 +80,17 @@ def _clean_choice(value: str | None, allowed) -> str:
 
 
 @router.get("/catalog", response_class=HTMLResponse)
-def catalog(request: Request, industry: str = "", level: str = ""):
+def catalog(request: Request, industry: str = "", level: str = "", team: str = ""):
     store = get_store()
     industry = _clean_choice(industry, INDUSTRIES)
     level = _clean_choice(level, LEVEL_LABELS)
     shown = store.list_cards(industry=industry or None, level=level or None)
-    total = len(store.list_cards())
+    published = store.list_cards()
+    total = len(published)
+    # Рекомендации — отдельный блок над каталогом (кейс: «не ограничивает общий каталог»):
+    # считаются по всем опубликованным задачам и ничего не убирают из списка ниже.
+    selected_team = store.get_team(team.strip()) if team.strip() else None
+    recommendations = recommend_tasks(selected_team, published) if selected_team else []
     # Одним проходом по всем откликам, а не по запросу на карточку в шаблоне.
     proposal_counts: dict[str, int] = {}
     for proposal in store.proposals.values():
@@ -99,6 +105,9 @@ def catalog(request: Request, industry: str = "", level: str = ""):
             "proposal_counts": proposal_counts,
             "industry": industry,
             "level": level,
+            "teams": store.list_teams(),
+            "selected_team": selected_team,
+            "recommendations": recommendations,
             "ai_mode": ai.ai_mode(),
         },
     )
