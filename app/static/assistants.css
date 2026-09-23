@@ -38,3 +38,15 @@
 .assistant-launch span { color: var(--muted); flex: 1; }
 .assistant-launch a { font-weight: 800; }
 @media (max-width: 800px) { .assistant-layout { grid-template-columns: 1fr; } .assistant-panel, .assistant-match, .assistant-mission { padding: 18px; } }
+/* Видимое состояние настоящего AI-запроса; без фиктивных процентов и мыслей модели. */
+.assistant-working { display: grid; gap: 14px; padding: 18px; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: var(--r-s); background: var(--surface-2); color: var(--text); }
+.assistant-working-head { display: flex; align-items: center; gap: 10px; }
+.assistant-working-orbit { flex: none; width: 25px; height: 25px; border: 2px solid var(--line); border-top-color: var(--accent); border-right-color: var(--pop); border-radius: 50%; animation: assistant-spin 1.2s linear infinite; }
+.assistant-working-clock { margin-left: auto; font-size: 12px; color: var(--accent); white-space: nowrap; }
+.assistant-working-source { color: var(--muted); font-size: 12px; }
+.assistant-working-pipeline { display: grid; gap: 7px; font-size: 12px; color: var(--muted); }
+.assistant-working-pipeline .active { color: var(--accent); }
+.assistant-working-bar { display: block; height: 3px; border-radius: 9px; background: linear-gradient(90deg,var(--line),var(--accent),var(--pop),var(--line)); background-size: 250% 100%; animation: assistant-flow 2s linear infinite; }
+@keyframes assistant-spin { to { transform: rotate(360deg); } }
+@keyframes assistant-flow { to { background-position: 250% 0; } }
+@media (prefers-reduced-motion: reduce) { .assistant-working-orbit, .assistant-working-bar { animation: none; } }

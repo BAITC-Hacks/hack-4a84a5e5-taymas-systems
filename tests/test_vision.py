@@ -1,175 +1,150 @@
-"""Тесты черновика из фото (HAC-58).
-
-Правила: файл проверяется по байтам, без ключа — честный отказ, а не заглушка; только провайдер openai;
-describe_photo никогда не бросает; в черновик попадает только описание видимого.
-"""
-
+"""HAC-58: контекст + фото → предложение, отдельное от фактов и записи."""
 import pytest
 from fastapi.testclient import TestClient
-
 from app import vision
-from app.llm import LLMResponseError
-from app.vision import MAX_DRAFT_CHARS, PhotoDescription, describe_photo, sniff_mime, validate_photo
+from app.vision import PhotoDescription, describe_photo, sniff_mime, validate_photo
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
-WEBP = b"RIFF" + b"\x00\x00\x00\x00" + b"WEBP" + b"\x00" * 64
-
-CASH_DESK = PhotoDescription(
-    seen="Кассовый аппарат с надписью «Ошибка E-42» на экране, перед ним очередь из пяти человек",
-    problem="На экране кассы ошибка E-42",
-    unclear="Как часто это происходит и сколько касс в магазине",
-    draft="У нас касса показывает ошибку E-42, перед ней стоит очередь.",
+PNG = b'\x89PNG\r\n\x1a\n' + b'\x00'*64
+JPEG = b'\xff\xd8\xff\xe0' + b'\x00'*64
+CONTEXT = 'На стройке теряем материалы. Хотим упростить их учёт и поиск.'
+DESCRIPTION = PhotoDescription(
+    seen='Материалы лежат в разных местах площадки.',
+    problem='Пользователь сообщает о потерях материалов.',
+    intent='Упростить учёт и поиск материалов.',
+    proposal='Предлагаю рассмотреть прототип учёта расположения материалов.',
+    unclear='Неизвестны объём номенклатуры и текущий способ учёта.',
+    questions=['Как сейчас учитываются материалы?', 'Кто будет пользоваться решением?'],
+    draft='На стройке теряем материалы и хотим упростить их поиск. Предлагаем команде согласовать прототип учёта расположения материалов. Состав данных и критерии проверки нужно уточнить.'
 )
 
-
-class _FakeClient:
-    def __init__(self, response=None, error=None):
+class FakeClient:
+    def __init__(self, response=DESCRIPTION, error=None):
         self.response, self.error, self.messages = response, error, None
-
-    def complete(self, messages, *, json_schema=None, temperature=0.2):
+    def complete(self, messages, **kwargs):
         self.messages = messages
+        assert kwargs['json_schema'] is PhotoDescription
         if self.error:
             raise self.error
-        assert json_schema is PhotoDescription
         return self.response
 
-
-def _with_key(monkeypatch, client, provider="openai"):
-    monkeypatch.setattr(vision, "llm_available", lambda: True)
-    monkeypatch.setattr(vision.settings, "LLM_PROVIDER", provider)
-    monkeypatch.setattr(vision, "get_client", lambda: client)
-
-
-def _no_key(monkeypatch):
-    monkeypatch.setattr(vision, "llm_available", lambda: False)
-
-
-def test_sniff_mime_reads_bytes_not_names():
-    assert sniff_mime(PNG) == "image/png"
-    assert sniff_mime(JPEG) == "image/jpeg"
-    assert sniff_mime(WEBP) == "image/webp"
-    assert sniff_mime(b"GIF89a" + b"\x00" * 8) == "image/gif"
-    assert sniff_mime(b"<html>photo.png</html>") is None
-    assert sniff_mime(b"") is None
-
-
-def test_validate_rejects_garbage(monkeypatch):
-    assert "пустой" in validate_photo(b"")
-    assert "не изображение" in validate_photo(b"hello, world")
-    monkeypatch.setattr(vision, "MAX_BYTES", 100)
-    assert "больше" in validate_photo(PNG + b"\x00" * 200)
-    assert validate_photo(PNG) is None
-
-
-def test_no_key_is_honest_refusal_not_a_stub(monkeypatch):
-    _no_key(monkeypatch)
-    result = describe_photo(PNG, "Ритейл")
-    assert result.ok is False
-    assert result.mode == "unavailable"
-    assert "ключ" in result.message
-    assert result.draft == "" and result.description is None
-
-
-def test_text_only_provider_declines_before_calling_model(monkeypatch):
-    client = _FakeClient(CASH_DESK)
-    _with_key(monkeypatch, client, provider="nvidia")
-    result = describe_photo(PNG)
-    assert result.ok is False and result.mode == "unavailable"
-    assert "OpenAI" in result.message
-    assert client.messages is None
-
-
-def test_invalid_file_never_reaches_model(monkeypatch):
-    client = _FakeClient(CASH_DESK)
-    _with_key(monkeypatch, client)
-    result = describe_photo(b"definitely not an image", "Ритейл")
-    assert result.mode == "invalid"
-    assert client.messages is None
-
-
-def test_model_description_lands_in_draft_with_photo_in_request(monkeypatch):
-    client = _FakeClient(CASH_DESK)
-    _with_key(monkeypatch, client)
-    result = describe_photo(PNG, "Ритейл")
-    assert result.ok is True and result.mode == "openai"
-    assert result.draft.startswith(CASH_DESK.draft)
-    assert "На фото:" in result.draft and "E-42" in result.draft
-    assert "Что похоже на проблему:" in result.draft
-    system, user = client.messages
-    assert system["role"] == "system" and "только то, что действительно видно" in system["content"]
-    text_part, image_part = user["content"]
-    assert "Ритейл" in text_part["text"]
-    assert image_part["image_url"]["url"].startswith("data:image/png;base64,")
-
-
-def test_model_failure_never_raises(monkeypatch):
-    _with_key(monkeypatch, _FakeClient(error=LLMResponseError("boom")))
-    result = describe_photo(JPEG)
-    assert result.ok is False and result.mode == "unavailable"
-    assert "словами" in result.message
-
-    _with_key(monkeypatch, _FakeClient(error=RuntimeError("transport")))
-    result = describe_photo(JPEG)
-    assert result.ok is False and result.mode == "unavailable"
-    assert "RuntimeError" in result.message
-
-
-def test_not_a_work_photo_gives_no_draft(monkeypatch):
-    _with_key(monkeypatch, _FakeClient(PhotoDescription(seen="Селфи на фоне моря", draft="")))
-    result = describe_photo(WEBP)
-    assert result.ok is False and result.mode == "openai"
-    assert result.draft == ""
-    assert "не видно" in result.message and "Селфи" in result.message
-
-
-def test_long_draft_is_capped(monkeypatch):
-    _with_key(monkeypatch, _FakeClient(PhotoDescription(seen="а" * 3000, draft="б" * 3000)))
-    result = describe_photo(PNG)
-    assert result.ok is True
-    assert len(result.draft) <= MAX_DRAFT_CHARS
-
+def with_key(monkeypatch, fake=None):
+    fake = fake or FakeClient()
+    monkeypatch.setattr(vision.settings, 'LLM_PROVIDER', 'openai')
+    monkeypatch.setattr(vision, 'llm_available', lambda: True)
+    monkeypatch.setattr(vision, 'get_client', lambda: fake)
+    return fake
 
 @pytest.fixture
-def client(tmp_path):
-    from app import store as store_module
+def setup(tmp_path):
     from app.main import app
+    from app.store import reset_store
+    return TestClient(app), reset_store(tmp_path/'store.json', 'data/seed.json')
 
-    store_module.reset_store(tmp_path / "store.json", "data/seed.json")
-    return TestClient(app)
+def test_sniff_and_validation():
+    assert sniff_mime(PNG) == 'image/png'
+    assert sniff_mime(JPEG) == 'image/jpeg'
+    assert sniff_mime(b'GIF89a'+b'0'*8) == 'image/gif'
+    assert sniff_mime(b'RIFF0000WEBP0000') == 'image/webp'
+    assert sniff_mime(b'<html>photo.png</html>') is None
+    assert validate_photo(b'') and validate_photo(b'not a photo')
+    assert validate_photo(PNG) is None
 
+@pytest.mark.parametrize('context', ['', 'abc', 'x'*4001])
+def test_context_required_before_model(monkeypatch, context):
+    fake = with_key(monkeypatch)
+    result = describe_photo(PNG, 'Промышленность', context)
+    assert result.mode == 'invalid' and not result.ok
+    assert fake.messages is None
 
-def test_route_without_key_returns_503_json(client, monkeypatch):
-    _no_key(monkeypatch)
-    response = client.post("/business/photo", files={"photo": ("cash.png", PNG, "image/png")}, data={"industry": "Ритейл"})
-    assert response.status_code == 503
-    body = response.json()
-    assert body["ok"] is False and body["mode"] == "unavailable"
+def test_file_limit_before_model(monkeypatch):
+    fake = with_key(monkeypatch)
+    monkeypatch.setattr(vision, 'MAX_BYTES', 20)
+    assert describe_photo(PNG, context=CONTEXT).mode == 'invalid'
+    assert fake.messages is None
 
+def test_text_and_photo_both_reach_model(monkeypatch):
+    fake = with_key(monkeypatch)
+    result = describe_photo(PNG, 'Промышленность', CONTEXT)
+    assert result.ok and result.draft == DESCRIPTION.draft
+    assert result.context == CONTEXT
+    # Наблюдение не дублируется длинной описью в тексте задачи.
+    assert DESCRIPTION.seen not in result.draft
+    assert result.description.proposal == DESCRIPTION.proposal
+    text, image = fake.messages[1]['content']
+    assert CONTEXT in text['text'] and 'Промышленность' in text['text']
+    assert image['image_url']['url'].startswith('data:image/png;base64,')
+    assert 'гипотеза' in fake.messages[0]['content']
 
-def test_route_rejects_garbage_and_missing_file(client, monkeypatch):
-    _no_key(monkeypatch)
-    garbage = client.post("/business/photo", files={"photo": ("x.png", b"hello", "image/png")})
-    assert garbage.status_code == 422 and garbage.json()["mode"] == "invalid"
-    missing = client.post("/business/photo", data={"industry": "Ритейл"})
-    assert missing.status_code == 422 and missing.json()["ok"] is False
+def test_no_key_and_text_provider_honest(monkeypatch):
+    fake = with_key(monkeypatch)
+    monkeypatch.setattr(vision, 'llm_available', lambda: False)
+    result = describe_photo(PNG, context=CONTEXT)
+    assert result.mode == 'unavailable' and 'ключ' in result.message
+    monkeypatch.setattr(vision.settings, 'LLM_PROVIDER', 'nvidia')
+    assert describe_photo(PNG, context=CONTEXT).mode == 'unavailable'
+    assert fake.messages is None
 
+def test_provider_check_failure_does_not_raise(monkeypatch):
+    with_key(monkeypatch)
+    def fail():
+        raise RuntimeError('private details')
+    monkeypatch.setattr(vision, 'llm_available', fail)
+    result = describe_photo(PNG, context=CONTEXT)
+    assert not result.ok and 'private details' not in result.message
 
-def test_route_returns_draft_and_sanitizes_industry(client, monkeypatch):
-    fake = _FakeClient(CASH_DESK)
-    _with_key(monkeypatch, fake)
-    response = client.post("/business/photo", files={"photo": ("cash.jpg", JPEG, "image/jpeg")}, data={"industry": "Мусор<script>"})
+def test_model_failure_or_invalid_response(monkeypatch):
+    with_key(monkeypatch, FakeClient(error=RuntimeError('private details')))
+    result = describe_photo(JPEG, context=CONTEXT)
+    assert not result.ok and result.mode == 'unavailable'
+    assert 'private details' not in result.message
+    with_key(monkeypatch, FakeClient(response='wrong schema'))
+    assert describe_photo(PNG, context=CONTEXT).mode == 'unavailable'
+
+def test_insufficient_context_shows_questions_without_draft(monkeypatch):
+    with_key(monkeypatch, FakeClient(PhotoDescription(seen='Фото не относится к запросу.', draft='', questions=['Какую проблему вы хотите решить?'])))
+    result = describe_photo(PNG, context='Хочу что-нибудь полезное.')
+    assert not result.ok and result.description.questions and not result.draft
+
+def test_irrelevant_photo_can_still_help_clear_text_goal(monkeypatch):
+    response = DESCRIPTION.model_copy(update={'seen':'Фото не относится к описанной рабочей ситуации.'})
+    with_key(monkeypatch, FakeClient(response))
+    assert describe_photo(PNG, context=CONTEXT).ok
+
+def test_draft_length_cap(monkeypatch):
+    with_key(monkeypatch, FakeClient(PhotoDescription(seen='Материалы', draft='я'*3000)))
+    assert len(describe_photo(PNG, context=CONTEXT).draft) == vision.MAX_DRAFT_CHARS
+
+def test_route_context_json_and_no_persistence(setup, monkeypatch):
+    client, store = setup
+    fake = with_key(monkeypatch)
+    before = store.path.read_bytes()
+    response = client.post('/business/photo', files={'photo':('site.png',PNG,'image/png')}, data={'context':CONTEXT,'industry':'<script>'})
     assert response.status_code == 200
-    body = response.json()
-    assert body["ok"] is True and body["draft"].startswith(CASH_DESK.draft)
-    assert body["description"]["unclear"] == CASH_DESK.unclear
-    assert "не указал" in fake.messages[1]["content"][0]["text"]
+    assert response.json()['draft'] == DESCRIPTION.draft
+    assert response.json()['context'] == CONTEXT
+    assert '<script>' not in fake.messages[1]['content'][0]['text']
+    assert store.path.read_bytes() == before
 
+def test_route_rejects_invalid_requests(setup, monkeypatch):
+    client, _ = setup
+    fake = with_key(monkeypatch)
+    for files, data in [(None, {'context':CONTEXT}), ({'photo':('x.png',b'garbage','image/png')}, {'context':CONTEXT}), ({'photo':('x.png',PNG,'image/png')}, {})]:
+        response = client.post('/business/photo', files=files, data=data)
+        assert response.status_code == 422 and not response.json()['ok']
+    assert fake.messages is None
 
-def test_new_page_has_photo_block(client):
-    page = client.get("/business/new")
-    assert page.status_code == 200
-    assert "Приложить фото" in page.text
-    assert "/static/photo.js" in page.text
-    assert client.get("/static/photo.js").status_code == 200
-    assert client.get("/static/photo.css").status_code == 200
+def test_route_without_key(setup, monkeypatch):
+    client, _ = setup
+    with_key(monkeypatch)
+    monkeypatch.setattr(vision, 'llm_available', lambda: False)
+    response = client.post('/business/photo', files={'photo':('x.png',PNG,'image/png')}, data={'context':CONTEXT})
+    assert response.status_code == 503 and response.json()['mode'] == 'unavailable'
+
+def test_new_page_has_explicit_review_step(setup):
+    client, _ = setup
+    response = client.get('/business/new')
+    assert response.status_code == 200
+    assert 'Использовать этот черновик' in response.text
+    assert 'Собрать задачу из текста и фото' in response.text
+    assert 'photo-processing' in response.text
+    assert client.get('/static/photo.js').status_code == 200

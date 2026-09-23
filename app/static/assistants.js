@@ -8,13 +8,27 @@
     if (!response.ok) throw new Error('Запрос не выполнен. Проверьте ввод и попробуйте снова.');
     return response.json();
   };
+  // Виден ход запроса, но таймер не выдаёт придуманные этапы за выполненные.
+  const activity = (target, title, source) => {
+    target.classList.add('assistant-working');
+    const head = el('span', undefined, 'assistant-working-head');
+    head.append(el('i', undefined, 'assistant-working-orbit'), el('b', title));
+    const timer = el('span', '0 с', 'assistant-working-clock'); head.append(timer);
+    const pipeline = el('span', undefined, 'assistant-working-pipeline');
+    pipeline.append(el('span', '✓ Запрос подготовлен'), el('span', '◉ Ожидаем ответ модели', 'active'), el('span', '○ Проверка и показ результата'));
+    target.replaceChildren(head, el('span', source, 'assistant-working-source'), pipeline, el('span', undefined, 'assistant-working-bar'));
+    const started = Date.now();
+    const interval = setInterval(() => { timer.textContent = `${Math.floor((Date.now()-started)/1000)} с`; }, 1000);
+    return () => { clearInterval(interval); target.classList.remove('assistant-working'); };
+  };
   const form = document.getElementById('assistant-form');
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const button = form.querySelector('[type="submit"]'), status = document.getElementById('assistant-status');
     if (button.disabled) return;
     const query = form.elements.message.value;
-    button.disabled = true; status.textContent = 'Читаю карточки и проверяю ответ…';
+    button.disabled = true;
+    const stopActivity = activity(status, layout.dataset.kind === 'student' ? 'AI-навигатор подбирает задачи' : 'AI-тренер изучает карточку', `Ваш запрос: ${query.length} символов · результат будет проверен по данным проекта`);
     try {
       const response = await fetch(form.action, {method:'POST', body:new FormData(form), signal:AbortSignal.timeout(180000)});
       if (!response.ok) throw new Error('Не удалось получить ответ. Попробуйте ещё раз.');
@@ -32,7 +46,7 @@
       }
       status.textContent = 'Готово. Можно уточнить запрос.';
     } catch (error) { status.textContent = error.name === 'TimeoutError' ? 'Ответ занимает слишком много времени. Попробуйте снова.' : error.message; }
-    finally { button.disabled = false; }
+    finally { stopActivity(); button.disabled = false; }
   });
   document.addEventListener('click', async event => {
     const chip = event.target.closest('[data-query]');
@@ -59,7 +73,8 @@
         const reviewResult = el('div'); reviewResult.setAttribute('role', 'status');
         draftForm.append(label, planLabel, review, reviewResult);
         draftForm.addEventListener('submit', async e => {
-          e.preventDefault(); review.disabled = true; reviewResult.replaceChildren(el('p', 'Сверяю ваш черновик с карточкой…'));
+          e.preventDefault(); review.disabled = true;
+          const stopReview = activity(reviewResult, 'AI-наставник проверяет отклик', 'Источники: карточка задачи + ваша идея + план');
           try {
             const result = await json(`/assistants/tasks/${encodeURIComponent(data.card.id)}/review.json`, {idea:idea.value, plan:plan.value});
             reviewResult.replaceChildren(el('p', result.mode === 'stub' ? result.mode_note : `AI-наставник · ${result.mode}`, 'muted'));
@@ -67,7 +82,7 @@
             const questions = el('ul'); result.questions.forEach(q => questions.append(el('li', q)));
             reviewResult.append(el('b', 'Вопросы перед отправкой'), questions, el('p', result.notice, 'muted'));
           } catch (error) { reviewResult.replaceChildren(el('p', error.message)); }
-          finally { review.disabled = false; }
+          finally { stopReview(); review.disabled = false; }
         });
         const copy = el('button', 'Скопировать черновик'); copy.type = 'button';
         copy.addEventListener('click', async () => {

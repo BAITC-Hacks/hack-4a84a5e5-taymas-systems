@@ -1,22 +1,31 @@
-{# Черновик из фото (HAC-58). Подключается одной строкой в business_new.html; всё своё — photo.css и photo.js. #}
 <link rel="stylesheet" href="/static/photo.css">
-<div class="photo-attach" data-endpoint="/business/photo">
+<section class="photo-attach" data-endpoint="/business/photo" aria-label="AI-постановка задачи по фото">
+  <div class="photo-heading"><span class="photo-ai-mark" aria-hidden="true">AI</span><div><strong>Покажите контекст. AI поможет поставить задачу.</strong><p class="hint">Сначала опишите, что хотите изменить. Затем добавьте фото — свяжем вашу цель с тем, что на нём видно.</p></div></div>
+  <ol class="photo-flow"><li><b>01</b> Ваша цель</li><li><b>02</b> Фото ситуации</li><li><b>03</b> Предложение AI</li></ol>
   <div class="photo-row">
-    <label class="photo-btn">
-      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Приложить фото">
-      <span><i class="photo-ico" aria-hidden="true"></i>Приложить фото</span>
-    </label>
-    <span class="hint">снимок с телефона, скриншот или Ctrl+V прямо в поле черновика · модель опишет только то, что видно, и вставит текст в черновик — вы его правите</span>
+    <label class="photo-btn"><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Приложить фото"><span>＋ Приложить фото</span></label>
+    <span class="hint">JPEG, PNG, WebP, GIF · до 5 МБ · можно перетащить или вставить Ctrl+V</span>
   </div>
-  {% if ai_mode == 'stub' %}
-  <p class="hint photo-hint-mode">Сейчас ключа OpenAI нет: анализ фото недоступен, кнопка честно скажет об этом. Остальной путь работает без ключа.</p>
-  {% elif ai_mode and ai_mode != 'openai' %}
-  <p class="hint photo-hint-mode">Сейчас провайдер «{{ ai_mode }}»: он не видит изображений, анализ фото работает только с OpenAI.</p>
-  {% endif %}
+  <figure class="photo-preview" hidden><div class="photo-image-wrap"><img alt="Приложенное фото"><i class="photo-scan" aria-hidden="true"></i></div><figcaption class="hint"></figcaption></figure>
+  <button class="photo-analyze" type="button" disabled>Собрать задачу из текста и фото <span aria-hidden="true">✦</span></button>
+  <p class="photo-ready-note hint">Напишите цель в поле выше и приложите фото.</p>
+  {% if ai_mode != 'openai' %}<p class="hint">Анализ изображения требует подключения OpenAI. Описание задачи словами доступно в любом режиме.</p>{% endif %}
+  <div class="photo-processing" hidden role="status" aria-live="polite">
+    <div class="photo-processing-head"><span class="photo-orbit" aria-hidden="true"></span><div><b>AI работает над постановкой</b><span class="photo-clock">0 с</span></div></div>
+    <p class="photo-context-line"></p>
+    <ol class="photo-pipeline"><li class="done">Текст и файл подготовлены</li><li class="active">Сопоставление цели и деталей снимка</li><li>Предложение задачи и вопросы для уточнения</li></ol>
+    <div class="photo-indeterminate" aria-hidden="true"><i></i></div>
+    <p class="hint">Ожидаем ответ модели. Наблюдения и предположения будут показаны отдельно.</p>
+  </div>
   <p class="photo-status" role="status" aria-live="polite" hidden></p>
-  <figure class="photo-preview" hidden>
-    <img alt="Приложенное фото">
-    <figcaption class="hint"></figcaption>
-  </figure>
-</div>
+  <section class="photo-result" hidden aria-label="Предложение AI">
+    <div class="photo-result-heading"><span class="photo-tag">AI / РЕЗУЛЬТАТ</span><h3>От ситуации — к задаче</h3></div>
+    <div class="photo-evidence"><article><span class="photo-tag">01 / ВАШ ЗАПРОС</span><p class="photo-source"></p></article><article><span class="photo-tag">02 / ПО ФОТО</span><p class="photo-seen"></p></article></div>
+    <article class="photo-hypothesis"><span class="photo-tag">03 / ПРЕДЛОЖЕНИЕ · ПОДТВЕРДИТЕ</span><p class="photo-proposal"></p></article>
+    <label>Предлагаемый черновик — можно отредактировать<textarea class="photo-draft" rows="5" maxlength="4000"></textarea></label>
+    <div class="photo-questions"><b>Что ещё уточнить</b><ul></ul><p class="photo-unclear hint"></p></div>
+    <button type="button" class="photo-apply">Использовать этот черновик →</button>
+    <p class="hint">Текст попадёт в поле выше. Карточка не создаётся и не публикуется без ваших следующих действий.</p>
+  </section>
+</section>
 <script src="/static/photo.js" defer></script>
