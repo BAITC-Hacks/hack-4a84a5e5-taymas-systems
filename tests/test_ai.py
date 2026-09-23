@@ -154,8 +154,12 @@ class _FakeCardClient:
         return self._card
 
 
-def test_llm_fabricated_contact_falls_back_to_stub_value(monkeypatch):
-    """Кейс из тикета: LLM выдумывает контакт, которого не было во входе — поле не принимаем."""
+def test_ai_function_rejects_fabricated_fact_not_reported_by_user(monkeypatch):
+    """Требование кейса: ИИ не добавляет фактов, которых не сообщил пользователь.
+
+    LLM выдумывает контакт, которого не было ни в черновике, ни в ответах — поле
+    отбрасывается и заменяется значением из заглушки (здесь — пустой строкой).
+    """
     answers = [Answer(field="data", question="Какие данные?", answer="Расписание в Excel на семестр, 300 групп")]
     fabricated = CardFields(
         title="Бот для расписания",
@@ -187,3 +191,144 @@ def test_llm_error_falls_back_to_stub_card_entirely(monkeypatch):
     card = ai.build_card(_DRAFT, "Образование", answers)
 
     assert card == ai._stub_card(_DRAFT, answers)
+
+
+# --- HAC-19: устойчивость к мусорному вводу -----------------------------
+
+_GARBAGE_DRAFTS = {
+    "emoji_only": "🎉🎉🎉😀🔥",
+    "repeated_char": "а" * 4000,
+    "english_text": "We want a bot that answers students about the schedule and exams.",
+    "kazakh_text": "Біз колледж студенттеріне сабақ кестесі туралы жауап беретін бот қалаймыз.",
+    "long_4000_chars": "Нужен бот для расписания. " * 150,  # > 4000 символов
+    "html_tags": "<script>alert(1)</script><b>Нужен бот</b> для <i>расписания</i> студентам",
+    "empty": "",
+    "whitespace_only": "   \n\t  ",
+}
+
+
+@pytest.mark.parametrize("draft", _GARBAGE_DRAFTS.values(), ids=_GARBAGE_DRAFTS.keys())
+def test_stub_questions_survive_garbage_input(draft):
+    """Мусорный вход (эмодзи, повтор символа, чужой язык, HTML, 4000+ символов, пустота)
+    не роняет generate_questions и всё равно даёт >= 3 разных вопроса по разным полям."""
+    questions = ai.generate_questions(draft, "Образование")
+    assert len(questions) >= 3
+    fields = [q.field for q in questions]
+    assert len(fields) == len(set(fields)), "вопросы должны быть по разным полям, а не три одинаковых"
+    for q in questions:
+        assert q.field in CARD_FIELDS
+        assert q.question.strip()
+
+
+@pytest.mark.parametrize("draft", _GARBAGE_DRAFTS.values(), ids=_GARBAGE_DRAFTS.keys())
+def test_stub_build_card_survives_garbage_input(draft):
+    """То же самое для сборки карточки: результат всегда валидный CardFields, без исключений."""
+    answers = [Answer(field="data", question="Какие данные?", answer=draft)]
+    card = ai.build_card(draft, "Образование", answers)
+    assert isinstance(card, CardFields)
+
+
+def test_garbage_input_stub_is_still_fast():
+    start = time.monotonic()
+    ai.generate_questions("🎉" * 500, "Образование")
+    elapsed_ms = (time.monotonic() - start) * 1000
+    assert elapsed_ms < 200
+
+
+# --- HAC-19: полный набор невалидных ответов LLM для вопросов -----------
+
+def test_invalid_llm_response_unknown_field_falls_back_to_stub(monkeypatch):
+    bad_questions = [
+        Question(field="not_a_real_field", question="Вопрос про то, чего нет в карточке?", why="llm"),
+        Question(field="data", question="Какие данные есть?", why="llm"),
+        Question(field="users", question="Кто пользователи?", why="llm"),
+    ]
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _FakeClient(bad_questions))
+
+    questions = ai.generate_questions(_DRAFT, "Образование")
+
+    assert len(questions) >= 3
+    assert all(q.field in CARD_FIELDS for q in questions)
+
+
+def test_invalid_llm_response_empty_question_text_falls_back_to_stub(monkeypatch):
+    bad_questions = [
+        Question(field="context", question="   ", why="llm"),
+        Question(field="data", question="Какие данные есть?", why="llm"),
+        Question(field="users", question="Кто пользователи?", why="llm"),
+    ]
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _FakeClient(bad_questions))
+
+    questions = ai.generate_questions(_DRAFT, "Образование")
+
+    assert len(questions) >= 3
+    assert all(q.question.strip() for q in questions)
+
+
+# --- HAC-19: last_fallback_reason — честность режима при сбое LLM --------
+
+def test_fallback_reason_is_none_when_llm_not_configured():
+    ai._set_fallback_reason("что-то из прошлого вызова")
+    ai.generate_questions(_DRAFT, "Образование")
+    assert ai.last_fallback_reason is None
+
+
+def test_fallback_reason_is_none_after_successful_llm_call(monkeypatch):
+    llm_questions = [
+        Question(field="context", question="Какие детали ещё есть?", why="llm"),
+        Question(field="data", question="Какие данные доступны?", why="llm"),
+        Question(field="expected_result", question="Что должно получиться?", why="llm"),
+    ]
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _FakeClient(llm_questions))
+
+    ai.generate_questions(_DRAFT, "Образование")
+
+    assert ai.last_fallback_reason is None
+
+
+def test_fallback_reason_is_set_when_llm_errors_on_questions(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _ExplodingClient())
+
+    ai.generate_questions(_DRAFT, "Образование")
+
+    assert ai.last_fallback_reason is not None
+    assert "Вопросы" in ai.last_fallback_reason
+
+
+def test_fallback_reason_is_set_when_llm_response_invalid_for_questions(monkeypatch):
+    invalid_questions = [
+        Question(field="context", question="A?", why="llm"),
+        Question(field="data", question="B?", why="llm"),
+    ]
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _FakeClient(invalid_questions))
+
+    ai.generate_questions(_DRAFT, "Образование")
+
+    assert ai.last_fallback_reason is not None
+
+
+def test_fallback_reason_is_set_when_llm_errors_on_card(monkeypatch):
+    answers = [Answer(field="data", question="Какие данные?", answer="Расписание в Excel на семестр, 300 групп")]
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _ExplodingCardClient())
+
+    ai.build_card(_DRAFT, "Образование", answers)
+
+    assert ai.last_fallback_reason is not None
+    assert "Карточка" in ai.last_fallback_reason
+
+
+def test_fallback_reason_is_none_after_successful_card_build(monkeypatch):
+    answers = [Answer(field="data", question="Какие данные?", answer="Расписание в Excel на семестр, 300 групп")]
+    fine_card = CardFields(title="Бот для расписания", context=_DRAFT, data="Расписание в Excel на семестр, 300 групп")
+    monkeypatch.setattr(ai, "llm_available", lambda: True)
+    monkeypatch.setattr(ai, "get_client", lambda: _FakeCardClient(fine_card))
+
+    ai.build_card(_DRAFT, "Образование", answers)
+
+    assert ai.last_fallback_reason is None
