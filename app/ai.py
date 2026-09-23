@@ -51,6 +51,17 @@ _WORD_RE = re.compile(r"[а-яёa-z]+", re.IGNORECASE)
 _TOKEN_RE = re.compile(r"[\w.@+-]{3,}")
 _STEM_LEN = 5  # длина "корня" слова для нестрогого сопоставления словоформ
 
+# Честность режима (HAC-19): если ключ есть, но конкретный вызов провалился и сработала
+# заглушка — это должно быть видно, а не выглядеть так, будто LLM отработал штатно.
+# ai_mode() менять нельзя (её уже читает веб), поэтому это отдельный модульный флаг:
+# None — последний вызов либо не нуждался в LLM, либо прошёл успешно; иначе — причина отката.
+last_fallback_reason: str | None = None
+
+
+def _set_fallback_reason(reason: str | None) -> None:
+    global last_fallback_reason
+    last_fallback_reason = reason
+
 
 def ai_mode() -> str:
     return settings.LLM_PROVIDER if llm_available() else "stub"
@@ -58,27 +69,42 @@ def ai_mode() -> str:
 
 def generate_questions(draft_text: str, industry: str) -> list[Question]:
     preliminary = CardFields(context=draft_text.strip())
-    if llm_available():
-        questions: list[Question] | None
-        try:
-            questions = _llm_questions(draft_text, industry, preliminary)
-        except (LLMConfigError, LLMResponseError) as exc:
-            logger.warning("LLM недоступен для генерации вопросов, включена заглушка: %s", exc)
-            questions = None
-        if questions is not None:
-            return questions
-        logger.warning("Ответ LLM не прошёл валидацию вопросов, включена заглушка")
+    if not llm_available():
+        _set_fallback_reason(None)
+        return _stub_questions(preliminary)
+
+    questions: list[Question] | None
+    try:
+        questions = _llm_questions(draft_text, industry, preliminary)
+    except (LLMConfigError, LLMResponseError) as exc:
+        logger.warning("LLM недоступен для генерации вопросов, включена заглушка: %s", exc)
+        _set_fallback_reason(f"Вопросы: LLM недоступен, использована заглушка ({exc})")
+        return _stub_questions(preliminary)
+
+    if questions is not None:
+        _set_fallback_reason(None)
+        return questions
+
+    logger.warning("Ответ LLM не прошёл валидацию вопросов, включена заглушка")
+    _set_fallback_reason("Вопросы: ответ LLM не прошёл валидацию, использована заглушка")
     return _stub_questions(preliminary)
 
 
 def build_card(draft_text: str, industry: str, answers: list[Answer]) -> CardFields:
     stub = _stub_card(draft_text, answers)
-    if llm_available():
-        try:
-            return _llm_card(draft_text, industry, answers, stub)
-        except (LLMConfigError, LLMResponseError) as exc:
-            logger.warning("LLM недоступен для сборки карточки, использую заглушку: %s", exc)
-    return stub
+    if not llm_available():
+        _set_fallback_reason(None)
+        return stub
+
+    try:
+        card = _llm_card(draft_text, industry, answers, stub)
+    except (LLMConfigError, LLMResponseError) as exc:
+        logger.warning("LLM недоступен для сборки карточки, использую заглушку: %s", exc)
+        _set_fallback_reason(f"Карточка: LLM недоступен, использована заглушка ({exc})")
+        return stub
+
+    _set_fallback_reason(None)
+    return card
 
 
 def _stub_card(draft_text: str, answers: list[Answer]) -> CardFields:
