@@ -122,6 +122,32 @@ def test_proposal_requires_known_team(client):
     assert "Выберите команду" in r.text
 
 
+def test_proposal_rejects_bad_link_and_too_long_text(client):
+    """Валидация: ссылка не http(s) и километр текста не создают отклик и не роняют страницу."""
+    from app.store import get_store
+
+    before = len(get_store().list_proposals("c_seed0003"))
+    base = {"team_id": "t_seed0001", "idea": "Идея решения", "plan": "План работ"}
+
+    for bad_link in ("ftp://example.kz/p", "javascript:alert(1)", "example.kz/p"):
+        r = client.post("/tasks/c_seed0003/proposals", data={**base, "link": bad_link})
+        assert r.status_code == 200
+        assert "http:// или https://" in r.text
+        assert bad_link in r.text  # введённое не потеряно
+
+    r = client.post("/tasks/c_seed0003/proposals", data={**base, "idea": "х" * 2001})
+    assert r.status_code == 200
+    assert "не длиннее" in r.text
+
+    assert len(get_store().list_proposals("c_seed0003")) == before
+
+    # Ссылка с https и без ссылки — обе допустимы.
+    for ok_link in ("https://example.kz/p", ""):
+        r = client.post("/tasks/c_seed0003/proposals", data={**base, "link": ok_link}, follow_redirects=False)
+        assert r.status_code == 303
+    assert len(get_store().list_proposals("c_seed0003")) == before + 2
+
+
 def test_business_decides_manually_each_proposal(client):
     """Кейс: бизнес выбирает одну, несколько или ни одной команды."""
     from app.store import get_store

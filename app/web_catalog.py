@@ -50,6 +50,24 @@ PROPOSAL_STATUS_LABELS = {
     "rejected": "отклонена",
 }
 
+# Границы отклика. Не «безопасность», а защита от мусора: эксперт по критерию
+# «валидация» пришлёт и километр текста, и javascript: в ссылке.
+PROPOSAL_TEXT_MAX = 2000
+LINK_PREFIXES = ("http://", "https://")
+
+
+def _proposal_error(team, idea: str, plan: str, link: str) -> str:
+    """Первая найденная ошибка формы отклика, пустая строка если всё в порядке."""
+    if team is None:
+        return "Выберите команду из списка."
+    if not idea or not plan:
+        return "Идея решения и план — обязательные поля. Опишите их хотя бы парой предложений."
+    if len(idea) > PROPOSAL_TEXT_MAX or len(plan) > PROPOSAL_TEXT_MAX:
+        return f"Идея и план — не длиннее {PROPOSAL_TEXT_MAX} символов каждое."
+    if link and not link.lower().startswith(LINK_PREFIXES):
+        return "Ссылка на прототип должна начинаться с http:// или https://."
+    return ""
+
 
 def _clean_choice(value: str | None, allowed) -> str:
     """Значение фильтра, которого нет в справочнике, считаем не заданным.
@@ -122,14 +140,9 @@ def create_proposal(
     if card is None:
         raise HTTPException(status_code=404, detail="Задача не найдена")
 
-    idea, plan = idea.strip(), plan.strip()
+    idea, plan, link = idea.strip(), plan.strip(), link.strip()
     team = store.get_team(team_id.strip())
-    if team is None:
-        error = "Выберите команду из списка."
-    elif not idea or not plan:
-        error = "Идея решения и план — обязательные поля. Опишите их хотя бы парой предложений."
-    else:
-        error = ""
+    error = _proposal_error(team, idea, plan, link)
 
     if error:
         context = _task_context(
@@ -148,7 +161,7 @@ def create_proposal(
             idea=idea,
             plan=plan,
             deadline=deadline.strip(),
-            link=link.strip(),
+            link=link,
         )
     )
     return RedirectResponse(f"/tasks/{card.id}#proposals", status_code=303)
