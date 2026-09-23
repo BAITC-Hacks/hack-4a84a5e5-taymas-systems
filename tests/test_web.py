@@ -235,3 +235,25 @@ def test_editor_fields_have_placeholders_and_weights(tmp_path):
     assert page.count('class="weight-tag') == len(CARD_FIELDS) - 1
     assert "Данные и материалы · 0 из 20 баллов" in page
     assert "Контекст и потребность · 20 из 20 баллов" in page
+
+
+def test_health_reports_mode_counters_and_version(tmp_path, monkeypatch):
+    from app import ai
+
+    monkeypatch.setenv("APP_VERSION", "abc1234")
+    monkeypatch.setattr(ai, "last_fallback_reason", "Вопросы: LLM недоступен")
+    store, client = _client(tmp_path)
+
+    body = client.get("/health").json()
+    expected = {"status", "ai_mode", "ai_fallback", "cards_total", "cards_published",
+                "teams", "proposals", "drafts", "store", "version"}
+    assert expected <= set(body)
+    assert body["status"] == "ok"
+    assert body["ai_mode"] in {"openai", "nvidia", "stub"}
+    assert body["ai_fallback"] == "Вопросы: LLM недоступен"
+    assert 0 <= body["cards_published"] <= body["cards_total"] == len(store.cards)
+    assert body["store"].endswith("store.json")
+    assert body["version"] == "abc1234"
+
+    monkeypatch.delenv("APP_VERSION")
+    assert client.get("/health").json()["version"] == "dev"

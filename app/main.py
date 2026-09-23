@@ -5,6 +5,7 @@
 """
 
 import logging
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -67,7 +68,18 @@ async def server_error(request: Request, exc: Exception):
 @app.get("/health")
 def health() -> dict:
     store = get_store()
-    return {"status": "ok", "ai_mode": ai.ai_mode(), "cards": len(store.cards), "teams": len(store.teams)}
+    return {
+        "status": "ok",
+        "ai_mode": ai.ai_mode(),
+        "ai_fallback": ai.last_fallback_reason,
+        "cards_total": len(store.cards),
+        "cards_published": len(store.list_cards()),
+        "teams": len(store.teams),
+        "proposals": len(store.proposals),
+        "drafts": len(store.drafts),
+        "store": store.path.as_posix(),
+        "version": os.environ.get("APP_VERSION") or "dev",
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
