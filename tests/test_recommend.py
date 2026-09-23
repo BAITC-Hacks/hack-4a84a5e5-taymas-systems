@@ -111,3 +111,36 @@ def test_limit_caps_number_of_recommendations():
     assert len(result) == 2
     # ограничение не произвольное: остаются задачи с наибольшим баллом
     assert {c.id for c, _ in result} == {"c4", "c3"}
+
+
+def test_explanation_combines_industry_and_text_signal():
+    """Объяснение прозрачнее одной общей фразы: отрасль + конкретное упоминание в тексте."""
+    card = _card(
+        "c9", "Образование", 60,
+        title="Дашборд для деканата",
+        context="Использует рекомендательные системы для подбора курсов.",
+    )
+    result = recommend_tasks(DATA_BEE, [card])
+    assert result
+    reason = result[0][1].lower()
+    assert "образование" in reason
+    assert "рекомендательные системы" in reason
+
+
+def test_explanation_caps_at_two_reasons():
+    card = _card(
+        "c10", "Образование", 60,
+        title="Чат-боты и рекомендательные системы для деканата",
+        context="Проект на Python.",
+    )
+    result = recommend_tasks(DATA_BEE, [card])
+    reason = result[0][1]
+    # не более двух причин, разделённых «; » — иначе объяснение превращается в простыню
+    assert reason.count(";") <= 1
+
+
+def test_explanation_starts_with_capital_letter():
+    result = recommend_tasks(DATA_BEE, ALL_CARDS)
+    assert result
+    reason = result[0][1]
+    assert reason[0] == reason[0].upper()

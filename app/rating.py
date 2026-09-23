@@ -166,3 +166,27 @@ def compute_rating(card: CardFields) -> Rating:
     score = sum(i.awarded for i in items)
     level = level_for(score)
     return Rating(score=score, level=level, level_label=LEVEL_LABELS[level], items=items, missing=missing)
+
+
+def progress_bar(score: int, width: int = 10) -> str:
+    """Текстовый прогресс-бар рейтинга, например «████████░░ 80/100». Для логов и консоли."""
+    clamped = max(0, min(100, score))
+    filled = round(width * clamped / 100)
+    return f"{'█' * filled}{'░' * (width - filled)} {clamped}/100"
+
+
+def next_best_action(rating: Rating) -> str | None:
+    """Самая весомая подсказка, что дописать дальше (rating.missing уже отсортирован по недобору).
+
+    None, если рейтинг полный и дописывать нечего.
+    """
+    return rating.missing[0] if rating.missing else None
+
+
+def rating_summary(rating: Rating) -> str:
+    """Однострочная сводка рейтинга: балл, уровень и самая весомая подсказка."""
+    summary = f"{rating.score}/100 — {rating.level_label}"
+    hint = next_best_action(rating)
+    if hint:
+        summary = f"{summary}. Не хватает: {hint}"
+    return summary
