@@ -9,7 +9,8 @@ from app.models import CARD_FIELDS, Answer, CardFields, Question
 from app.prompts import QuestionsResponse
 
 
-def test_stub_generates_at_least_three_valid_distinct_questions():
+def test_stub_generates_at_least_three_valid_distinct_questions(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     start = time.monotonic()
     questions = ai.generate_questions("Хотим бота для ответов студентам про расписание", "Образование")
     elapsed_ms = (time.monotonic() - start) * 1000
@@ -23,7 +24,8 @@ def test_stub_generates_at_least_three_valid_distinct_questions():
         assert q.question.strip()
 
 
-def test_stub_covers_all_gaps_up_to_max_for_empty_draft():
+def test_stub_covers_all_gaps_up_to_max_for_empty_draft(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     questions = ai.generate_questions("", "Образование")
     assert 3 <= len(questions) <= 6
 
@@ -113,7 +115,8 @@ def test_llm_error_falls_back_to_stub_without_raising(monkeypatch):
 _DRAFT = "Хотим бота для ответов студентам про расписание"
 
 
-def test_stub_build_card_places_answers_into_fields():
+def test_stub_build_card_places_answers_into_fields(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     answers = [
         Answer(field="data", question="Какие данные?", answer="Расписание в Excel на семестр, 300 групп"),
         Answer(field="users", question="Кто пользователи?", answer="Студенты и деканат"),
@@ -126,14 +129,16 @@ def test_stub_build_card_places_answers_into_fields():
     assert card.contact == ""
 
 
-def test_stub_appends_context_answer_instead_of_overwriting():
+def test_stub_appends_context_answer_instead_of_overwriting(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     answers = [Answer(field="context", question="Уточните контекст", answer="Расписание меняется каждую неделю")]
     card = ai.build_card(_DRAFT, "Образование", answers)
     assert _DRAFT in card.context
     assert "Расписание меняется каждую неделю" in card.context
 
 
-def test_mini_example_from_ticket_build_card():
+def test_mini_example_from_ticket_build_card(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     card = ai.build_card(
         _DRAFT,
         "Образование",
@@ -208,9 +213,14 @@ _GARBAGE_DRAFTS = {
 
 
 @pytest.mark.parametrize("draft", _GARBAGE_DRAFTS.values(), ids=_GARBAGE_DRAFTS.keys())
-def test_stub_questions_survive_garbage_input(draft):
+def test_stub_questions_survive_garbage_input(draft, monkeypatch):
     """Мусорный вход (эмодзи, повтор символа, чужой язык, HTML, 4000+ символов, пустота)
-    не роняет generate_questions и всё равно даёт >= 3 разных вопроса по разным полям."""
+    не роняет generate_questions и всё равно даёт >= 3 разных вопроса по разным полям.
+
+    Явно проверяем именно заглушку (monkeypatch llm_available=False) — поведение не
+    должно молча зависеть от того, стоит ли в окружении реальный ключ.
+    """
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     questions = ai.generate_questions(draft, "Образование")
     assert len(questions) >= 3
     fields = [q.field for q in questions]
@@ -221,14 +231,16 @@ def test_stub_questions_survive_garbage_input(draft):
 
 
 @pytest.mark.parametrize("draft", _GARBAGE_DRAFTS.values(), ids=_GARBAGE_DRAFTS.keys())
-def test_stub_build_card_survives_garbage_input(draft):
+def test_stub_build_card_survives_garbage_input(draft, monkeypatch):
     """То же самое для сборки карточки: результат всегда валидный CardFields, без исключений."""
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     answers = [Answer(field="data", question="Какие данные?", answer=draft)]
     card = ai.build_card(draft, "Образование", answers)
     assert isinstance(card, CardFields)
 
 
-def test_garbage_input_stub_is_still_fast():
+def test_garbage_input_stub_is_still_fast(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     start = time.monotonic()
     ai.generate_questions("🎉" * 500, "Образование")
     elapsed_ms = (time.monotonic() - start) * 1000
@@ -269,7 +281,8 @@ def test_invalid_llm_response_empty_question_text_falls_back_to_stub(monkeypatch
 
 # --- HAC-19: last_fallback_reason — честность режима при сбое LLM --------
 
-def test_fallback_reason_is_none_when_llm_not_configured():
+def test_fallback_reason_is_none_when_llm_not_configured(monkeypatch):
+    monkeypatch.setattr(ai, "llm_available", lambda: False)
     ai._set_fallback_reason("что-то из прошлого вызова")
     ai.generate_questions(_DRAFT, "Образование")
     assert ai.last_fallback_reason is None
