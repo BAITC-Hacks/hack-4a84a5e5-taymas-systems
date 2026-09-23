@@ -548,3 +548,22 @@ body .task-head ~ section { margin-top: 56px; }
 body .task-head ~ section > h2 { margin-bottom: 20px; }
 body .card-fields dt { padding-top: 0; }
 body .card-fields dd { margin-bottom: 18px; }
+
+/* ===== Каталог: сетка карточек вместо длинных строк (HAC-55) ===== */
+body .task-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+body .task-row { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "rank . score" "main main main"; align-items: start; gap: 14px 12px; padding: 22px 24px 24px; }
+body .task-row .rank { grid-area: rank; font: 500 13px/1 var(--mono); min-width: 0; padding: 7px 10px; border-radius: 999px; background: var(--surface-2); }
+body .task-row .rank::before { content: "#"; opacity: .6; }
+body .task-row.level-priority .rank { background: var(--accent); color: var(--accent-ink); }
+body .task-row .score { grid-area: score; font-size: 30px; line-height: 1; }
+body .task-row .score span { font-size: 12px; }
+body .task-main { grid-area: main; display: grid; gap: 12px; min-width: 0; }
+body .task-title { font-size: 18px; line-height: 1.3; text-decoration: none; text-wrap: balance; }
+body .task-title::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+body .task-row:hover .task-title { color: var(--accent); }
+body .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13px; }
+body .task-need { margin: 0; font-size: 14px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+body .task-need.task-hint { -webkit-line-clamp: 2; padding: 10px 12px; border-radius: var(--r-s); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); color: var(--text); font-size: 13px; }
+@media (min-width: 900px) { body .task-list > .task-row.level-priority:first-child { grid-column: span 2; } }
+body .task-row { align-content: start; grid-template-rows: auto 1fr; }
+body .task-need.task-hint { display: block; -webkit-line-clamp: unset; }
