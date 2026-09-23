@@ -24,3 +24,28 @@ fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 14px; ba
 .rating-panel h2 { margin-top: 0; font-size: 18px; }
 .rating-panel ul { padding-left: 18px; }
 @media (max-width: 760px) { .editor-layout { grid-template-columns: 1fr; } }
+/* Редактор карточки (HAC-11) */
+input[type="text"] { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.notice.info { color: #1a3f8f; background: #eef3ff; }
+.small { font-size: 13px; }
+.form-actions { display: flex; gap: 12px; }
+.confirm-box { gap: 12px; }
+.confirm-box .checkbox { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+button.primary { background: #1c6b39; }
+.score-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.score-big { font-size: 40px; font-weight: 750; line-height: 1.1; }
+.score-big .muted { font-size: 18px; font-weight: 500; }
+.level-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.lvl-draft { background: #f1f3f5; color: #55606d; }
+.lvl-workable { background: #fff4e0; color: #8a5a00; }
+.lvl-ready { background: #e4f5e9; color: #1c6b39; }
+.lvl-priority { background: #e5edff; color: #1a3f8f; }
+.rating-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+.rating-table th, .rating-table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.rating-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rating-table tr.full td.num { color: #1c6b39; font-weight: 650; }
+.rating-table tr.half td.num { color: #8a5a00; font-weight: 650; }
+.rating-table tr.zero td.num { color: #8a2020; font-weight: 650; }
+.rating-panel h3 { font-size: 15px; margin: 16px 0 6px; }
+.rating-panel .missing { padding-left: 20px; font-size: 14px; }
+.legend { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 13px; }

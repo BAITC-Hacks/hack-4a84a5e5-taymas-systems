@@ -1,23 +1,95 @@
 {% extends "base.html" %}
-{% block title %}Task card editor ? AI Sana Challenge Hub{% endblock %}
+{% block title %}Редактор карточки · AI Sana Challenge Hub{% endblock %}
 {% block content %}
-<h1>Task card editor</h1>
-<p>Review and extend the card. The rating below is preliminary; confirmation happens during the publication step.</p>
+<h1>Редактор карточки задачи</h1>
+<p class="muted">
+  Дополните карточку и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.
+  {% if card.status == "published" %}Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.{% endif %}
+</p>
+
+{% if message %}<p class="notice info">{{ message }}</p>{% endif %}
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+
 <div class="editor-layout">
-  <form method="post" class="form-stack">
-    {% for field in CARD_FIELDS %}
+  <form method="post" action="/business/cards/{{ card.id }}/edit" class="form-stack" id="card-form">
+    {% for field in card_fields %}
     <label>{{ field_labels[field] }}
-      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}">{{ card|attr(field) }}</textarea>
+      {% if field == "title" %}
+      <input type="text" name="title" value="{{ card.title }}" maxlength="200">
+      {% else %}
+      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}">{{ card[field] }}</textarea>
+      {% endif %}
     </label>
     {% endfor %}
-    <button type="submit">Save changes</button>
+    <label>Отрасль
+      <select name="industry">
+        {% for industry in INDUSTRIES %}
+        <option value="{{ industry }}" {% if industry == card.industry %}selected{% endif %}>{{ industry }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <div class="form-actions">
+      <button type="submit">Сохранить и пересчитать</button>
+    </div>
+
+    <fieldset class="confirm-box">
+      <legend>{% if card.status == "published" %}Подтверждение изменений{% else %}Подтверждение и публикация{% endif %}</legend>
+      <label class="checkbox">
+        <input type="checkbox" name="confirmed" value="on">
+        Подтверждаю, что карточка составлена верно
+      </label>
+      <button type="submit" formaction="/business/cards/{{ card.id }}/publish" class="primary">
+        {% if card.status == "published" %}Подтвердить изменения{% else %}Подтвердить и опубликовать{% endif %}
+      </button>
+    </fieldset>
   </form>
+
   <aside class="rating-panel">
-    <h2>Preliminary rating: {{ rating.score }} / 100</h2>
-    <p><strong>{{ rating.level_label }}</strong>{% if card.confirmed %} ? confirmed: {{ card.score }}{% endif %}</p>
-    <ul>{% for item in rating.items %}<li>{{ item.label }}: {{ item.awarded }} / {{ item.weight }}{% if item.hint %}<br><span class="muted">{{ item.hint }}</span>{% endif %}</li>{% endfor %}</ul>
-    {% if rating.missing %}<h3>What to add</h3><ul>{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+    <div class="score-head">
+      <div>
+        <div class="muted small">Предварительный балл</div>
+        <div class="score-big">{{ rating.score }}<span class="muted"> / 100</span></div>
+      </div>
+      <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
+    </div>
+    <p class="small">
+      {% if card.status == "published" %}
+        Подтверждено: <strong>{{ card.score }}</strong> · {{ card.level_label }}
+        {% if card.confirmed %}— совпадает с текущей версией{% else %}— есть неподтверждённые изменения{% endif %}
+      {% else %}
+        Подтверждено: <strong>—</strong> (карточка ещё не опубликована)
+      {% endif %}
+    </p>
+
+    <table class="rating-table">
+      <thead><tr><th>Показатель</th><th class="num">Баллы</th><th>Что добавить</th></tr></thead>
+      <tbody>
+        {% for item in rating.items %}
+        <tr class="{% if item.awarded == item.weight %}full{% elif item.awarded == 0 %}zero{% else %}half{% endif %}">
+          <td>{{ item.label }}</td>
+          <td class="num">{{ item.awarded }}/{{ item.weight }}</td>
+          <td class="small">{{ item.hint or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><th>Итого</th><th class="num">{{ rating.score }}/100</th><th>{{ rating.level_label }}</th></tr></tfoot>
+    </table>
+
+    {% if rating.missing %}
+    <h3>Недостающие сведения</h3>
+    <ol class="missing">{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ol>
+    {% else %}
+    <p class="notice info">Все сведения заполнены.</p>
+    {% endif %}
+
+    <h3>Уровни готовности</h3>
+    <ul class="legend">
+      <li><span class="level-badge lvl-draft">Черновик</span> 0–39</li>
+      <li><span class="level-badge lvl-workable">Рабочая</span> 40–69</li>
+      <li><span class="level-badge lvl-ready">Готовая</span> 70–89</li>
+      <li><span class="level-badge lvl-priority">Приоритетная</span> 90–100</li>
+    </ul>
   </aside>
 </div>
 {% endblock %}
-
