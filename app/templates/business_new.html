@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}New task ? AI Sana Challenge Hub{% endblock %}
+{% block content %}
+<h1>Post a task</h1>
+<p>Describe the task in your own words. The service will then ask at least three questions and create an editable card.</p>
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+<form method="post" class="form-stack">
+  <label>Industry
+    <select name="industry">{% for item in INDUSTRIES %}<option value="{{ item }}" {% if item == industry %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+  </label>
+  <label>Task draft
+    <textarea name="text" rows="9" required placeholder="What is happening, what needs to be solved, and for whom?">{{ text or '' }}</textarea>
+  </label>
+  <button type="submit">Get clarifying questions</button>
+</form>
+{% endblock %}
+
