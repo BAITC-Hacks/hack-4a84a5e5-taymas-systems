@@ -28,6 +28,25 @@
   </div>
 </dialog>
 
+<div class="stats-strip">
+  <div class="stat-tile accent">
+    <div class="stat-num">{{ published }}</div>
+    <div class="stat-label">задач в каталоге</div>
+  </div>
+  <div class="stat-tile pop">
+    <div class="stat-num">{{ avg_score }}<span class="stat-suffix">/100</span></div>
+    <div class="stat-label">средний балл готовности</div>
+  </div>
+  <div class="stat-tile pop2">
+    <div class="stat-num">{{ seeking_team }}</div>
+    <div class="stat-label">{{ "ищет команду" if seeking_team == 1 else "ищут команду" }}</div>
+  </div>
+  <div class="stat-tile good">
+    <div class="stat-num">{{ teams }}</div>
+    <div class="stat-label">команд в системе</div>
+  </div>
+</div>
+
 <div class="entry-grid">
   <a class="entry entry-business tilt" href="/business/new">
     <span class="entry-kicker">Я представитель бизнеса</span>

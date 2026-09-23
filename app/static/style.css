@@ -144,6 +144,17 @@ button:active { transform: scale(.96); }
 .entry-business .entry-go { background: var(--accent-ink); color: var(--accent); }
 .entry-team .entry-go { background: var(--pop-ink); color: var(--pop); }
 
+/* Статистика каталога на главной: живые числа, не украшение (HAC-26/рейтинг) */
+.stats-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 4px 0 28px; }
+.stat-tile { background: var(--surface); border-radius: var(--r-m); padding: 20px 22px; box-shadow: inset 0 0 0 1px var(--line); animation: in .7s var(--spring) both; }
+.stat-num { font: 700 44px/1 var(--mono); letter-spacing: -.02em; }
+.stat-suffix { font-size: 16px; font-weight: 500; color: var(--muted); }
+.stat-label { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.stat-tile.accent .stat-num { color: var(--accent); }
+.stat-tile.pop .stat-num { color: var(--pop); }
+.stat-tile.pop2 .stat-num { color: var(--pop-2); }
+.stat-tile.good .stat-num { color: var(--good); }
+
 .ticker { margin: 28px 0; border-block: 1px solid var(--line); overflow: hidden; padding: 14px 0; color: var(--muted); }
 .ticker-track { display: flex; width: max-content; gap: 34px; animation: marquee 40s linear infinite; font: 500 13px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
 .ticker-track span::after { content: "/"; margin-left: 34px; color: var(--line); }
