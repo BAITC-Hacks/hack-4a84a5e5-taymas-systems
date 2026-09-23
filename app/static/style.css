@@ -529,3 +529,6 @@ details.more > p { line-height: 1.6; }
 .tour-steps b, .skills b, .journey b, .quest .plus, .console-log li::before { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .tour-steps b { width: 24px; }
 .home-hero h1 { max-width: 20ch; }
+.home-hero + dialog + .stats-strip { margin: 40px 0 0; gap: 16px; }
+.stickers { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 560px) { .stickers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
