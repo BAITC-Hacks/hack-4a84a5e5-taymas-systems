@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Сравнение откликов · {{ card.title }}{% endblock %}
+{% block content %}
+<style>
+  .cmp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; margin-bottom: 8px; }
+  .cmp-note { max-width: 72ch; }
+  .cmp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 18px; }
+  .cmp-col { padding: 18px 20px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); display: grid; gap: 12px; align-content: start; }
+  .cmp-col h3 { margin: 0; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .cmp-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
+  .cmp-facts dt { color: var(--muted); font-weight: 600; }
+  .cmp-facts dd { margin: 0; font-weight: 700; }
+  .cmp-facts dd.no { color: var(--muted); font-weight: 600; }
+  .cmp-block h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .cmp-block ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+  .cmp-block.risks li { color: var(--bad); }
+  .cmp-text { font-size: 14px; color: var(--muted); }
+  .cmp-text b { color: var(--text); }
+</style>
+<div class="cmp-head">
+  <h1>Сравнение <em>откликов</em></h1>
+  <a href="/tasks/{{ card.id }}#proposals">← к задаче «{{ card.title }}»</a>
+</div>
+<p class="note cmp-note">Здесь только материал для решения: факты по каждому отклику и вопросы, которые стоит задать команде.
+  Сравнение <b>не ранжирует и не выбирает</b> — принять или отклонить отклик можно на странице задачи, вручную и по каждому отдельно.</p>
+
+{% if not pairs %}
+<p class="empty">Откликов пока нет — сравнивать нечего. <a href="/tasks/{{ card.id }}">Вернуться к задаче</a></p>
+{% else %}
+{% if comparison.mode == 'stub' %}
+<p class="notice info">Разбор моделью недоступен{% if comparison.fallback_reason %} ({{ comparison.fallback_reason }}){% else %}: нет ключа API{% endif %} — показаны только факты из текста откликов.</p>
+{% else %}
+<p class="hint">Разбор написала модель ({{ comparison.mode }}) только по тексту откликов и карточки; строки с выбором или с чужими числами отброшены.</p>
+{% endif %}
+<div class="cmp-grid">
+  {% for proposal, team in pairs %}
+  {% set f = facts_by_id[proposal.id] %}
+  {% set r = comparison.reviews.get(proposal.id) %}
+  <section class="cmp-col" aria-label="Отклик команды {{ f.team_name }}">
+    <h3><span>{{ f.team_name }}</span><span class="badge badge-{{ proposal.status }}">{{ status_labels[proposal.status] }}</span></h3>
+    <dl class="cmp-facts">
+      <dt>Срок</dt><dd{% if not f.has_deadline %} class="no"{% endif %}>{{ f.deadline if f.has_deadline else 'не указан' }}</dd>
+      <dt>Прототип</dt><dd{% if not f.has_link %} class="no"{% endif %}>{% if f.has_link %}<a href="{{ proposal.link }}" rel="noreferrer noopener">ссылка</a>{% else %}нет ссылки{% endif %}</dd>
+      <dt>План</dt><dd>{{ f.plan_steps }} шаг{{ 'ов' if f.plan_steps % 10 == 0 or f.plan_steps % 10 >= 5 or 11 <= f.plan_steps % 100 <= 14 else ('' if f.plan_steps % 10 == 1 else 'а') }} · {{ f.plan_words }} слов</dd>
+      <dt>Идея</dt><dd>{{ f.idea_words }} слов</dd>
+      <dt>Технологии</dt><dd{% if not f.technologies %} class="no"{% endif %}>{{ f.technologies|join(', ') if f.technologies else 'из профиля команды в отклике не названы' }}</dd>
+    </dl>
+    <p class="cmp-text"><b>Идея:</b> {{ proposal.idea }}</p>
+    {% if r %}
+    {% if r.strengths %}<div class="cmp-block"><h4>Сильное в тексте</h4><ul>{% for s in r.strengths %}<li>{{ s }}</li>{% endfor %}</ul></div>{% endif %}
+    {% if r.questions %}<div class="cmp-block"><h4>Спросить команду</h4><ul>{% for q in r.questions %}<li>{{ q }}</li>{% endfor %}</ul></div>{% endif %}
+    {% if r.risks %}<div class="cmp-block risks"><h4>Риск по тексту</h4><ul>{% for x in r.risks %}<li>{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+<p class="note cmp-note" style="margin-top:18px">Выбор — за бизнесом: <a href="/tasks/{{ card.id }}#proposals">принять или отклонить отклик на странице задачи</a>. Автоматического назначения команды в системе нет.</p>
+{% endif %}
+{% endblock %}

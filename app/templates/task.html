@@ -81,6 +81,7 @@
 
 <section id="proposals">
   <h2>Отклики команд <span class="count">{{ proposals|length }}</span></h2>
+  {% if proposals %}<p class="note"><a href="/tasks/{{ card.id }}/compare">Сравнить отклики рядом →</a> факты по каждому и вопросы командам, без ранжирования: выбор остаётся за вами</p>{% endif %}
   {% if proposals %}
   <ul class="proposals">
     {% for proposal, team in proposals %}
