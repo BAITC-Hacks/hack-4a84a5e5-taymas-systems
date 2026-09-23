@@ -220,3 +220,18 @@ def test_server_error_gives_html_500(tmp_path, monkeypatch):
     assert response.status_code == 500
     assert response.headers["content-type"].startswith("text/html")
     assert "На главную" in response.text
+
+
+def test_editor_fields_have_placeholders_and_weights(tmp_path):
+    from app.main import FIELD_PLACEHOLDERS, app
+    from app.models import CARD_FIELDS
+
+    _, card = _weak_card(tmp_path)
+    page = TestClient(app).get(f"/business/cards/{card.id}/edit").text
+
+    assert set(FIELD_PLACEHOLDERS) == set(CARD_FIELDS)
+    for text in FIELD_PLACEHOLDERS.values():
+        assert f'placeholder="{text}"' in page
+    assert page.count('class="weight-tag') == len(CARD_FIELDS) - 1
+    assert "Данные и материалы · 0 из 20 баллов" in page
+    assert "Контекст и потребность · 20 из 20 баллов" in page

@@ -42,11 +42,16 @@
 <div class="editor-layout">
   <form method="post" action="/business/cards/{{ card.id }}/edit" class="form-stack" id="card-form">
     {% for field in card_fields %}
-    <label>{{ field_labels[field] }}
+    {% set item = field_items.get(field) %}
+    <label>
+      <span class="field-head">
+        {{ field_labels[field] }}
+        {% if item %}<span class="weight-tag {% if item.awarded == item.weight %}full{% elif item.awarded == 0 %}zero{% else %}half{% endif %}" title="Показатель рейтинга: {{ item.label }}">{{ item.label }} · {{ item.awarded }} из {{ item.weight }} баллов</span>{% endif %}
+      </span>
       {% if field == "title" %}
-      <input type="text" name="title" value="{{ form_card.title }}" {% if errors[field] %}class="invalid"{% endif %}>
+      <input type="text" name="title" value="{{ form_card.title }}" placeholder="{{ placeholders[field] }}" {% if errors[field] %}class="invalid"{% endif %}>
       {% else %}
-      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}" {% if errors[field] %}class="invalid"{% endif %}>{{ form_card[field] }}</textarea>
+      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}" placeholder="{{ placeholders[field] }}" {% if errors[field] %}class="invalid"{% endif %}>{{ form_card[field] }}</textarea>
       {% endif %}
       {% if errors[field] %}<span class="field-error">{{ errors[field] }}</span>{% endif %}
     </label>

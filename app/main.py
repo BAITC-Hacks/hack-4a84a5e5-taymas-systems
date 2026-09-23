@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 
 from app import ai
 from app.models import CARD_FIELDS, FIELD_LABELS, INDUSTRIES, LEVEL_LABELS, Answer, Card, new_id, now
-from app.rating import compute_rating
+from app.rating import SCALE, compute_rating
 from app.store import get_store
 from app.web_catalog import router as catalog_router
 
@@ -78,6 +78,20 @@ def index(request: Request):
         "index.html",
         {"published": len(store.list_cards()), "teams": len(store.list_teams()), "ai_mode": ai.ai_mode()},
     )
+# Подсказки полей — из колонки «Как считать» раздела 4 ТЗ.
+FIELD_PLACEHOLDERS = {
+    "title": "Коротко: что нужно сделать и для кого",
+    "context": "Что происходит сейчас: объёмы, сроки, кто страдает",
+    "need": "Что необходимо изменить",
+    "users": "Для кого создаётся решение: роли и количество",
+    "data": "Доступные данные, примеры или источники: формат, объём, где лежат",
+    "constraints": "Сроки, технологии, доступы или иные границы",
+    "expected_result": "Конкретный результат работы команды: сервис, прототип, отчёт",
+    "success_criteria": "Измеримые признаки: проценты, время, доля",
+    "contact": "Кто отвечает на вопросы команды",
+    "interaction_format": "Формат консультаций и порядок обратной связи",
+}
+
 MAX_DRAFT_LEN = 4000
 MAX_FIELD_LEN = 2000
 
@@ -164,13 +178,18 @@ def _editor(
     change: dict | None = None,
 ):
     """form_card — то, что показывать в полях (введённое при ошибке), card — сохранённая версия для рейтинга."""
+    rating = compute_rating(card)
+    items = {item.key: item for item in rating.items}
+    field_items = {field: items[key] for key, _label, _weight, fields in SCALE for field in fields}
     return _page(
         request,
         "business_card_edit.html",
         {
             "card": card,
             "form_card": form_card or card,
-            "rating": compute_rating(card),
+            "rating": rating,
+            "field_items": field_items,
+            "placeholders": FIELD_PLACEHOLDERS,
             "card_fields": CARD_FIELDS,
             "field_labels": FIELD_LABELS,
             "answered": sum(1 for a in card.answers if a.answer),
