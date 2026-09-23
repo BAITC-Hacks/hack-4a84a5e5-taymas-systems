@@ -4,10 +4,13 @@
 только скелет: главная и /health. Остальное добавляется тикетами поверхности.
 """
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, RedirectResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -27,6 +30,39 @@ templates.env.globals.update(INDUSTRIES=INDUSTRIES, LEVEL_LABELS=LEVEL_LABELS)
 # Каталог и страница задачи живут в своём модуле (HAC-12, HAC-13).
 app.include_router(catalog_router)
 
+logger = logging.getLogger(__name__)
+
+_ERROR_TITLES = {
+    400: "Некорректный запрос",
+    404: "Страница не найдена",
+    405: "Такое действие здесь недоступно",
+}
+
+
+def _error_page(request: Request, status_code: int, detail: str = ""):
+    title = _ERROR_TITLES.get(status_code, "Что-то пошло не так" if status_code >= 500 else "Запрос не выполнен")
+    # Стандартные английские detail Starlette («Not Found») человеку не показываем.
+    if not detail or detail.isascii():
+        detail = "Проверьте адрес или вернитесь на главную." if status_code < 500 else "Ошибка на сервере. Попробуйте ещё раз чуть позже."
+    context = {"status_code": status_code, "title": title, "detail": detail, "ai_mode": ai.ai_mode()}
+    return templates.TemplateResponse(request, "error.html", context, status_code=status_code)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    return _error_page(request, exc.status_code, str(exc.detail or ""))
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    return _error_page(request, 400, "Форма заполнена некорректно. Вернитесь назад и проверьте поля.")
+
+
+@app.exception_handler(Exception)
+async def server_error(request: Request, exc: Exception):
+    logger.exception("Необработанная ошибка на %s", request.url.path)
+    return _error_page(request, 500)
+
 
 @app.get("/health")
 def health() -> dict:
@@ -42,9 +78,21 @@ def index(request: Request):
         "index.html",
         {"published": len(store.list_cards()), "teams": len(store.list_teams()), "ai_mode": ai.ai_mode()},
     )
+MAX_DRAFT_LEN = 4000
+MAX_FIELD_LEN = 2000
+
+
+def _too_long(value: str, limit: int) -> str:
+    return f"Не длиннее {limit} символов, сейчас {len(value)}. Сократите текст."
+
+
+def _page(request: Request, name: str, context: dict, status_code: int = 200):
+    return templates.TemplateResponse(request, name, {"ai_mode": ai.ai_mode(), **context}, status_code=status_code)
+
+
 @app.get("/business/new", response_class=HTMLResponse)
 def new_business_task(request: Request):
-    return templates.TemplateResponse(request, "business_new.html", {"ai_mode": ai.ai_mode()})
+    return _page(request, "business_new.html", {"errors": {}})
 
 
 @app.post("/business/new", response_class=HTMLResponse)
@@ -52,25 +100,47 @@ async def create_business_draft(request: Request):
     form = await request.form()
     text = str(form.get("text", "")).strip()
     industry = str(form.get("industry", "")).strip()
+    errors = {}
     if not text:
-        return templates.TemplateResponse(request, "business_new.html", {"ai_mode": ai.ai_mode(), "error": "Describe the task before continuing.", "text": text, "industry": industry}, status_code=400)
+        errors["text"] = "Опишите задачу — черновик не может быть пустым."
+    elif len(text) > MAX_DRAFT_LEN:
+        errors["text"] = _too_long(text, MAX_DRAFT_LEN) + " Детали можно добавить в ответах на вопросы и в редакторе."
     if industry not in INDUSTRIES:
-        industry = INDUSTRIES[-1]
+        errors["industry"] = "Выберите отрасль из списка."
+    if errors:
+        context = {"errors": errors, "error": "Проверьте поля формы.", "text": text, "industry": industry}
+        return _page(request, "business_new.html", context, status_code=400)
     store = get_store()
     draft = store.add_draft(text, industry)
     draft.questions = ai.generate_questions(draft.text, draft.industry)
     store.update_draft(draft)
-    return templates.TemplateResponse(request, "business_questions.html", {"draft": draft, "ai_mode": ai.ai_mode()})
+    # PRG: F5 на странице вопросов не создаёт второй черновик и не зовёт LLM повторно.
+    return RedirectResponse(url=f"/business/drafts/{draft.id}", status_code=303)
+
+
+def _get_draft_or_404(draft_id: str):
+    draft = get_store().get_draft(draft_id)
+    if draft is None:
+        raise HTTPException(status_code=404, detail="Черновик не найден")
+    return draft
+
+
+@app.get("/business/drafts/{draft_id}", response_class=HTMLResponse)
+def draft_questions(request: Request, draft_id: str):
+    return _page(request, "business_questions.html", {"draft": _get_draft_or_404(draft_id), "answers": {}, "errors": {}})
 
 
 @app.post("/business/drafts/{draft_id}/answers")
 async def save_answers(request: Request, draft_id: str):
     store = get_store()
-    draft = store.get_draft(draft_id)
-    if draft is None:
-        raise HTTPException(status_code=404, detail="Draft not found")
+    draft = _get_draft_or_404(draft_id)
     form = await request.form()
-    answers = [Answer(field=q.field, question=q.question, answer=str(form.get(f"answer_{i}", "")).strip()) for i, q in enumerate(draft.questions)]
+    values = {i: str(form.get(f"answer_{i}", "")).strip() for i in range(len(draft.questions))}
+    errors = {i: _too_long(v, MAX_FIELD_LEN) for i, v in values.items() if len(v) > MAX_FIELD_LEN}
+    if errors:
+        context = {"draft": draft, "answers": values, "errors": errors, "error": "Проверьте ответы."}
+        return _page(request, "business_questions.html", context, status_code=400)
+    answers = [Answer(field=q.field, question=q.question, answer=values[i]) for i, q in enumerate(draft.questions)]
     fields = ai.build_card(draft.text, draft.industry, answers)
     card = store.add_card(Card(id=new_id("c"), draft_id=draft.id, industry=draft.industry, answers=answers, **fields.model_dump()))
     return RedirectResponse(url=f"/business/cards/{card.id}/edit", status_code=303)
@@ -83,20 +153,44 @@ def _get_card_or_404(card_id: str) -> Card:
     return card
 
 
-def _editor(request: Request, card: Card, *, message: str = "", error: str = ""):
-    return templates.TemplateResponse(
+def _editor(request: Request, card: Card, *, message: str = "", error: str = "", form_card: Card | None = None, errors: dict | None = None):
+    """form_card — то, что показывать в полях (введённое при ошибке), card — сохранённая версия для рейтинга."""
+    return _page(
         request,
         "business_card_edit.html",
         {
             "card": card,
+            "form_card": form_card or card,
             "rating": compute_rating(card),
             "card_fields": CARD_FIELDS,
             "field_labels": FIELD_LABELS,
+            "answered": sum(1 for a in card.answers if a.answer),
             "message": message,
             "error": error,
-            "ai_mode": ai.ai_mode(),
+            "errors": errors or {},
         },
+        status_code=400 if errors else 200,
     )
+
+
+def _field_errors(form) -> dict:
+    errors = {}
+    for field in CARD_FIELDS:
+        value = str(form.get(field, "")).strip()
+        if len(value) > MAX_FIELD_LEN:
+            errors[field] = _too_long(value, MAX_FIELD_LEN)
+    if "industry" in form and str(form.get("industry", "")).strip() not in INDUSTRIES:
+        errors["industry"] = "Выберите отрасль из списка."
+    return errors
+
+
+def _rejected(request: Request, card: Card, form, errors: dict):
+    """Ничего не сохраняет, возвращает редактор с введённым текстом и ошибками у полей."""
+    draft_copy = card.model_copy(deep=True)
+    for field in CARD_FIELDS:
+        if field in form:
+            setattr(draft_copy, field, str(form.get(field, "")).strip())
+    return _editor(request, card, form_card=draft_copy, errors=errors, error="Изменения не сохранены: проверьте отмеченные поля.")
 
 
 def _apply_form(card: Card, form) -> bool:
@@ -130,8 +224,12 @@ def edit_card(request: Request, card_id: str):
 @app.post("/business/cards/{card_id}/edit", response_class=HTMLResponse)
 async def update_card(request: Request, card_id: str):
     card = _get_card_or_404(card_id)
+    form = await request.form()
+    errors = _field_errors(form)
+    if errors:
+        return _rejected(request, card, form, errors)
     before = compute_rating(card).score
-    _apply_form(card, await request.form())
+    _apply_form(card, form)
     # Балл зачитывается только при подтверждении: score/level здесь не трогаем.
     card.confirmed = False
     get_store().update_card(card)
@@ -144,6 +242,9 @@ async def update_card(request: Request, card_id: str):
 async def publish_card(request: Request, card_id: str):
     card = _get_card_or_404(card_id)
     form = await request.form()
+    errors = _field_errors(form)
+    if errors:
+        return _rejected(request, card, form, errors)
     store = get_store()
     if _apply_form(card, form):
         card.confirmed = False

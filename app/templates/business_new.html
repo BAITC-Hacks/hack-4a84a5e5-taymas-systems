@@ -6,10 +6,12 @@
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
 <form method="post" class="form-stack">
   <label>Отрасль
-    <select name="industry">{% for item in INDUSTRIES %}<option value="{{ item }}" {% if item == industry %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+    <select name="industry" {% if errors.industry %}class="invalid"{% endif %}>{% for item in INDUSTRIES %}<option value="{{ item }}" {% if item == industry %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+    {% if errors.industry %}<span class="field-error">{{ errors.industry }}</span>{% endif %}
   </label>
   <label>Черновик задачи
-    <textarea name="text" rows="9" required placeholder="Что происходит сейчас, что нужно решить и для кого?">{{ text or '' }}</textarea>
+    <textarea name="text" rows="9" required placeholder="Что происходит сейчас, что нужно решить и для кого?" {% if errors.text %}class="invalid"{% endif %}>{{ text or '' }}</textarea>
+    {% if errors.text %}<span class="field-error">{{ errors.text }}</span>{% else %}<span class="hint">До 4000 символов.</span>{% endif %}
   </label>
   <button type="submit">Получить уточняющие вопросы</button>
 </form>
