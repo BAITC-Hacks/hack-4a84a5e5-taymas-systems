@@ -85,6 +85,8 @@
         <span class="proposal-count">{% if count %}откликов: {{ count }}{% else %}откликов пока нет{% endif %}</span>
       </div>
       {% if card.need %}<p class="task-need">{{ card.need }}</p>{% endif %}
+      {% set hint = card_hints.get(card.id) %}
+      {% if hint %}<p class="task-need task-hint">Не хватает: {{ hint }}</p>{% endif %}
     </div>
     <div class="score" title="Подтверждённый рейтинг готовности">{{ card.score }}<span>/100</span></div>
   </li>

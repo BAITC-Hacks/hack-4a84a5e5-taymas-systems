@@ -31,7 +31,7 @@ from app.models import (
     Proposal,
     new_id,
 )
-from app.rating import compute_rating
+from app.rating import compute_rating, next_best_action
 from app.recommend import recommend_tasks
 from app.store import get_store
 
@@ -95,6 +95,9 @@ def catalog(request: Request, industry: str = "", level: str = "", team: str = "
     proposal_counts: dict[str, int] = {}
     for proposal in store.proposals.values():
         proposal_counts[proposal.card_id] = proposal_counts.get(proposal.card_id, 0) + 1
+    # Самая весомая подсказка на карточку — прямо в списке, чтобы команда видела,
+    # чего не хватает, не открывая задачу. None у полных карточек — ничего не показываем.
+    card_hints = {c.id: next_best_action(compute_rating(c)) for c in shown}
     return templates.TemplateResponse(
         request,
         "catalog.html",
@@ -103,6 +106,7 @@ def catalog(request: Request, industry: str = "", level: str = "", team: str = "
             "shown": len(shown),
             "total": total,
             "proposal_counts": proposal_counts,
+            "card_hints": card_hints,
             "industry": industry,
             "level": level,
             "teams": store.list_teams(),
