@@ -12,3 +12,14 @@ __pycache__
 prep
 CLAUDE.md
 HACKALEM-CONTEXT.md
+
+# Рабочая документация команды и материалы кейса: в рантайме не нужны,
+# только утяжеляют образ. tests/ намеренно остаётся — make check гоняет их внутри контейнера.
+BRIEF.md
+PROGRESS.md
+AGENTS.md
+.agents
+docs
+*.pdf
+Makefile
+docker-compose.yml
