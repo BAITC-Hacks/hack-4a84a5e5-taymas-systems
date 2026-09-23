@@ -233,5 +233,8 @@ def test_proposal_review_never_sends_or_decides(setup, monkeypatch):
 
 def test_local_search_ignores_common_words_and_inside_word_matches(setup):
     client, store = setup
+    # Изолированный регрессионный набор: новые тематические задачи не должны
+    # менять проверку, что «про» не совпадает с «прогноз» и «прототип».
+    store.cards = {key: card for key, card in store.cards.items() if key.startswith('c_seed')}
     result = client.post('/assistants/student.json', json={'message':'Хочу задачу про образование и чат-ботов'}).json()
     assert [c['id'] for c in result['cards']] == ['c_seed0001']

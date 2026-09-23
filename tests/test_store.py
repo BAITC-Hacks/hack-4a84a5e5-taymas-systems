@@ -1,6 +1,8 @@
 """Хранилище: сид, сортировка каталога, фильтры, отклики, персистентность."""
 
 from datetime import datetime, timedelta, timezone
+import json
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +18,9 @@ def store(tmp_path):
 
 
 def test_seed_volume(store):
-    assert (len(store.drafts), len(store.cards), len(store.teams), len(store.proposals)) == (5, 5, 9, 5)
+    seed = json.loads(Path(SEED).read_text())
+    for name in ("drafts", "cards", "teams", "proposals"):
+        assert set(getattr(store, name)) == {item["id"] for item in seed[name]}
 
 
 def test_catalog_sorted_by_score_then_recency(store):
@@ -34,7 +38,8 @@ def test_catalog_sorted_by_score_then_recency(store):
 
 def test_filters_combine(store):
     only = store.list_cards(industry="Образование", level="priority")
-    assert [c.id for c in only] == ["c_seed0001"]
+    assert "c_seed0001" in [c.id for c in only]
+    assert all(c.industry == "Образование" and c.level == "priority" for c in only)
     assert store.list_cards(industry="Образование", level="draft") == []
 
 
@@ -60,4 +65,4 @@ def test_persistence_across_instances(tmp_path):
     draft = first.add_draft("Хотим бота", "Образование")
     second = Store(path, SEED)
     assert second.get_draft(draft.id).text == "Хотим бота"
-    assert len(second.cards) == 5
+    assert second.cards == first.cards

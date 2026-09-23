@@ -45,7 +45,7 @@ def test_catalog_filters_by_level_and_industry(client):
     assert "Прогноз спроса" not in r.text
 
     # Оба фильтра вместе, заведомо пустая комбинация.
-    r = client.get("/catalog?industry=Логистика&level=priority")
+    r = client.get("/catalog?industry=Образование&level=draft")
     assert "По этим фильтрам задач нет" in r.text
 
 
@@ -282,10 +282,12 @@ def test_position_changes_after_confirmed_edit(client):
     size = len(store.list_cards())
     assert f"<strong>{size}</strong> из {size}" in client.get("/tasks/c_seed0005").text
 
-    # 95 баллов — впереди остаётся только сид-карточка со 100, значит вторая позиция.
+    # Новая позиция учитывает все карточки расширенного сида.
     card.score, card.level = 95, "priority"
     store.update_card(card)
-    assert f"<strong>2</strong> из {size}" in client.get("/tasks/c_seed0005").text
+    expected_position = 1 + sum(c.score > 95 for c in store.list_cards())
+    assert expected_position < size
+    assert f"<strong>{expected_position}</strong> из {size}" in client.get("/tasks/c_seed0005").text
 
 
 def test_catalog_shows_proposal_counts(client):

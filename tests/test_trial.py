@@ -194,6 +194,11 @@ def test_weak_card_trial_page_shows_blockers(client):
 
 
 def test_trial_page_suggests_matching_team(client):
+    # Фиксируем профильный набор: расширение демонстрационного каталога
+    # не должно менять регрессионную проверку выбора и selected в форме.
+    from app.store import get_store
+    store = get_store()
+    store.teams = {key: team for key, team in store.teams.items() if key in {'t_seed0001', 't_seed0002'}}
     page = client.get("/business/cards/c_seed0001/trial")
     assert "Подсказка: задаче по профилю подходит <strong>DataBee</strong>" in page.text
     assert 'value="t_seed0001" selected' in page.text

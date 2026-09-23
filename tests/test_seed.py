@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from app.models import Card, Draft, Proposal, Team
+from app.models import INDUSTRIES, Card, Draft, Proposal, Team
 from app.rating import compute_rating, level_for
 
 SEED = json.loads(Path("data/seed.json").read_text(encoding="utf-8"))
@@ -70,3 +70,35 @@ def test_seed_levels_cover_the_scale():
     """Каталог должен показывать все четыре уровня, иначе фильтр по уровню нечем проверить."""
     levels = {c.level for c in _cards()}
     assert levels == {"draft", "workable", "ready", "priority"}, levels
+
+
+def test_demo_catalog_covers_every_industry_and_has_unique_ids():
+    from collections import Counter
+
+    counts = Counter(c.industry for c in _cards())
+    assert set(counts) == set(INDUSTRIES)
+    assert all(count >= 5 for count in counts.values())
+    assert len(SEED['teams']) >= 20
+    assert len(SEED['proposals']) >= 70
+    for items in SEED.values():
+        assert len({item['id'] for item in items}) == len(items)
+    assert len({c.title for c in _cards()}) == len(_cards())
+
+
+def test_demo_history_is_consistent_and_does_not_claim_ai_trials():
+    cards = {c.id: c for c in _cards()}
+    drafts = {d['id']: Draft.model_validate(d) for d in SEED['drafts']}
+    for card in cards.values():
+        assert card.trial is None  # Испытание нужно действительно запустить.
+        assert card.created_at <= card.published_at
+        if card.draft_id:
+            assert card.draft_id in drafts
+            assert drafts[card.draft_id].created_at <= card.created_at
+    for raw in SEED['proposals']:
+        proposal = Proposal.model_validate(raw)
+        assert proposal.created_at >= cards[proposal.card_id].published_at
+        if proposal.status == 'pending':
+            assert proposal.decided_at is None
+        else:
+            assert proposal.decided_at >= proposal.created_at
+    assert {p['status'] for p in SEED['proposals']} == {'pending', 'accepted', 'rejected'}
