@@ -1,17 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>От бизнес-задачи к решению</h1>
-<p>Бизнес описывает задачу, система помогает довести её до полной карточки и считает рейтинг готовности.
-Студенческие команды выбирают задачи в каталоге и откликаются, бизнес сам решает, с кем работать.</p>
-<div class="cards two">
-  <a class="card" href="/business/new">
-    <h2>Я представитель бизнеса</h2>
-    <p>Опишите задачу в свободной форме — дальше система задаст уточняющие вопросы.</p>
+<section class="home-hero">
+  <span class="eyebrow">AI Sana · бизнес-задачи для студенческих команд</span>
+  <h1>От сырой идеи до <em>готовой задачи</em>, которую хотят решать</h1>
+  <p class="lede">Бизнес описывает задачу как умеет — система задаёт уточняющие вопросы, собирает карточку и считает рейтинг готовности. Команды выбирают задачи в каталоге и откликаются, бизнес сам решает, с кем работать.</p>
+</section>
+
+<div class="entry-grid">
+  <a class="entry entry-business tilt" href="/business/new">
+    <span class="entry-kicker">Я представитель бизнеса</span>
+    <span class="entry-title">Разместить задачу</span>
+    <span class="entry-text">Опишите задачу в свободной форме — дальше система задаст уточняющие вопросы.</span>
+    <span class="entry-go">Начать →</span>
   </a>
-  <a class="card" href="/catalog">
-    <h2>Я студенческая команда</h2>
-    <p>Опубликовано задач: {{ published }}. Команд в системе: {{ teams }}.</p>
+  <a class="entry entry-team tilt" href="/catalog">
+    <span class="entry-kicker">Я студенческая команда</span>
+    <span class="entry-title">Выбрать задачу</span>
+    <span class="entry-stats"><b>{{ published }}</b> опубликовано · <b>{{ teams }}</b> команд</span>
+    <span class="entry-go">В каталог →</span>
   </a>
 </div>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    {% for _ in range(2) %}
+    <span>Черновик <i>0–39</i></span><span>Рабочая <i>40–69</i></span><span>Готовая <i>70–89</i></span><span>Приоритетная <i>90–100</i></span><span>Баллы — только за подтверждённые поля</span>
+    {% endfor %}
+  </div>
+</div>
+
+<ol class="journey">
+  <li><b>1</b><span>Черновик</span><small>пара фраз своими словами</small></li>
+  <li><b>2</b><span>Вопросы</span><small>ИИ спрашивает о пробелах</small></li>
+  <li><b>3</b><span>Карточка</span><small>рейтинг 0–100 с расшифровкой</small></li>
+  <li><b>4</b><span>Подтверждение</span><small>баллы засчитываются</small></li>
+  <li><b>5</b><span>Каталог</span><small>команды откликаются, бизнес выбирает</small></li>
+</ol>
+
 <p class="rule-note">Рейтинг готовности (0–100) учитывает только заполненные поля, <strong>подтверждённые бизнесом</strong>: после каждого подтверждённого дополнения балл пересчитывается и задача занимает новое место в каталоге.</p>
 {% endblock %}

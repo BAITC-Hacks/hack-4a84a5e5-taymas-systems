@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Уточняющие вопросы · AI Sana Challenge Hub{% endblock %}
 {% block content %}
-<h1>Уточните задачу</h1>
+<ol class="steps" aria-label="Путь задачи">
+  <li class="done" data-n="1">Черновик</li><li class="now" data-n="2">Вопросы</li><li data-n="3">Карточка</li><li data-n="4">Подтверждение</li><li data-n="5">Каталог</li>
+</ol>
+<h1>Уточните <em>задачу</em></h1>
 <blockquote class="draft-quote"><span class="muted">Черновик: {{ draft.industry }}</span>{{ draft.text }}</blockquote>
-<p class="muted">На любой вопрос можно не отвечать — недостающее потом дополните в редакторе карточки.</p>
+<p class="lede">На любой вопрос можно не отвечать — недостающее потом дополните в редакторе карточки. <span class="answered-live" data-total="{{ draft.questions|length }}">Отвечено <b>0</b> из {{ draft.questions|length }}</span></p>
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-<form method="post" action="/business/drafts/{{ draft.id }}/answers" class="form-stack">
+<form method="post" action="/business/drafts/{{ draft.id }}/answers" class="form-stack q-form">
   {% for question in draft.questions %}
-  <fieldset>
-    <legend>{{ loop.index }}. {{ question.question }}</legend>
+  <fieldset class="q-card" style="--i:{{ loop.index0 }}">
+    <legend><span class="q-num">{{ loop.index }}</span>{{ question.question }}</legend>
     {% if question.why %}<p class="why">Зачем: {{ question.why }}</p>{% endif %}
-    <textarea name="answer_{{ loop.index0 }}" rows="4" placeholder="Ваш ответ" {% if errors[loop.index0] %}class="invalid"{% endif %}>{{ answers.get(loop.index0, '') }}</textarea>
+    <textarea name="answer_{{ loop.index0 }}" rows="3" placeholder="Ваш ответ" {% if errors[loop.index0] %}class="invalid"{% endif %}>{{ answers.get(loop.index0, '') }}</textarea>
     {% if errors[loop.index0] %}<span class="field-error">{{ errors[loop.index0] }}</span>{% endif %}
   </fieldset>
   {% endfor %}
-  <button type="submit">Собрать карточку</button>
+  <button type="submit" class="big-go">Собрать карточку <span class="arr">→</span></button>
 </form>
 {% endblock %}

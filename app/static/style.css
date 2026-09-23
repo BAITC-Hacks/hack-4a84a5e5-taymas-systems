@@ -134,3 +134,79 @@ button:active { transform: scale(.96); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ===== Страницы: главная, конструктор, вопросы (HAC-55) ===== */
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 800 12px/1 var(--body); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 1.8s ease-in-out infinite; }
+.lede { margin: 0 0 20px; color: var(--muted); max-width: 64ch; font-size: 16px; }
+.home-hero { padding: 24px 0 8px; max-width: 900px; }
+.home-hero h1 { font-size: clamp(34px, 5.6vw, 66px); margin-top: 16px; }
+
+.entry-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 20px 0 8px; perspective: 900px; }
+.entry { position: relative; overflow: hidden; display: grid; gap: 10px; align-content: start; min-height: 230px; padding: 26px; border-radius: var(--r-l); text-decoration: none; transform-style: preserve-3d; transition: transform .4s var(--spring), box-shadow .3s; animation: in .7s var(--spring) both; }
+.entry-business { background: var(--accent); color: var(--accent-ink); }
+.entry-team { background: var(--pop); color: var(--pop-ink); animation-delay: .1s; }
+.entry:hover { box-shadow: 0 24px 50px var(--glow); }
+.entry::after { content: ""; position: absolute; right: -60px; bottom: -60px; width: 200px; height: 200px; border-radius: 50%; border: 28px solid currentColor; opacity: .1; transition: transform .6s var(--spring); }
+.entry:hover::after { transform: scale(1.25) rotate(20deg); }
+.entry-kicker { font: 800 12px/1 var(--body); text-transform: uppercase; letter-spacing: .12em; opacity: .75; }
+.entry-title { font: 900 clamp(26px, 3.4vw, 36px)/1.05 var(--display); letter-spacing: -.02em; }
+.entry-text, .entry-stats { font-size: 15px; max-width: 36ch; }
+.entry-stats b { font: 900 22px/1 var(--display); }
+.entry-go { margin-top: auto; justify-self: start; padding: 12px 18px; border-radius: 999px; font-weight: 800; }
+.entry-business .entry-go { background: var(--accent-ink); color: var(--accent); }
+.entry-team .entry-go { background: var(--pop-ink); color: var(--pop); }
+
+.ticker { margin: 28px 0; background: var(--text); color: var(--bg); border-radius: 999px; overflow: hidden; padding: 13px 0; transform: rotate(-1deg); }
+.ticker-track { display: flex; width: max-content; gap: 34px; animation: marquee 24s linear infinite; font: 900 14px/1 var(--display); text-transform: uppercase; white-space: nowrap; }
+.ticker-track span::after { content: "●"; margin-left: 34px; color: var(--accent); }
+.ticker-track i { font-style: normal; color: var(--accent); }
+.ticker:hover .ticker-track { animation-play-state: paused; }
+
+.journey { list-style: none; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.journey li { display: grid; gap: 4px; padding: 18px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); transition: transform .3s var(--spring); }
+.journey li:hover { transform: translateY(-4px) rotate(-1deg); }
+.journey b { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font: 900 14px/1 var(--display); margin-bottom: 6px; }
+.journey span { font: 800 16px/1.2 var(--display); }
+.journey small { color: var(--muted); font-size: 13px; }
+.rule-note { padding: 16px 20px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); max-width: 80ch; }
+
+/* Путь задачи: шаги-таблетки */
+.steps { display: flex; gap: 6px; flex-wrap: wrap; list-style: none; margin: 0 0 18px; padding: 0; }
+.steps li { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 7px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font: 700 12px/1 var(--body); color: var(--muted); }
+.steps li::before { content: attr(data-n); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); font: 800 10px/1 var(--display); }
+.steps li.done { color: var(--text); }
+.steps li.done::before { content: "✓"; background: var(--good); color: #05180f; }
+.steps li.now { background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 24px var(--glow); }
+.steps li.now::before { background: var(--accent-ink); color: var(--accent); animation: bob 1.6s ease-in-out infinite; }
+
+/* Конструктор */
+.new-form { max-width: 820px; }
+.chips-field legend { float: left; width: 100%; padding: 0; margin-bottom: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip span { display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--field); box-shadow: inset 0 0 0 1px var(--line); font-weight: 700; cursor: pointer; transition: transform .25s var(--spring), background .2s; }
+.chip span:hover { transform: translateY(-2px); }
+.chip input:checked + span { background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 20px var(--glow); transform: rotate(-2deg); }
+.chip input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 3px; }
+.draft-box { padding: 18px 20px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.draft-box textarea { font-size: 17px; }
+.big-go { display: inline-flex; align-items: center; gap: 10px; padding: 20px 30px; font-size: 16px; box-shadow: 0 12px 30px var(--glow); }
+.big-go .arr { transition: transform .3s var(--spring); }
+.big-go:hover .arr { transform: translateX(6px) rotate(-8deg); }
+
+/* Уточняющие вопросы */
+.draft-quote { margin: 0 0 16px; padding: 18px 22px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px var(--line); font: 600 19px/1.45 var(--body); max-width: 80ch; }
+.draft-quote .muted { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 6px; }
+.answered-live { display: inline-block; margin-left: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text); font-weight: 700; font-size: 13px; }
+.answered-live b { font-family: var(--display); color: var(--accent); }
+.q-form { max-width: 860px; }
+.q-card { animation: in .6s var(--spring) both; animation-delay: calc(var(--i) * 70ms); transition: transform .3s var(--spring), box-shadow .3s; }
+.q-card:focus-within { transform: translateY(-3px); box-shadow: 0 0 0 2px var(--accent), 0 18px 40px var(--glow); }
+.q-card legend { float: left; width: 100%; padding: 0; display: flex; gap: 12px; align-items: flex-start; font: 800 16px/1.4 var(--body); }
+.q-num { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font: 900 14px/1 var(--display); transform: rotate(-6deg); }
+.why { margin: 0; justify-self: start; padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--pop) 22%, var(--surface)); font-size: 13px; font-weight: 700; }
+
+@keyframes marquee { to { transform: translateX(-50%); } }
+@keyframes bob { 50% { transform: translateY(-3px); } }

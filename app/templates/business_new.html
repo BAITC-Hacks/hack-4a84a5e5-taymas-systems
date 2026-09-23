@@ -1,18 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Разместить задачу · AI Sana Challenge Hub{% endblock %}
 {% block content %}
-<h1>Разместить задачу</h1>
-<p>Опишите задачу своими словами — система задаст не менее трёх уточняющих вопросов и соберёт редактируемую карточку.</p>
+<ol class="steps" aria-label="Путь задачи">
+  <li class="now" data-n="1">Черновик</li><li data-n="2">Вопросы</li><li data-n="3">Карточка</li><li data-n="4">Подтверждение</li><li data-n="5">Каталог</li>
+</ol>
+<h1>Разместить <em>задачу</em></h1>
+<p class="lede">Опишите задачу своими словами — система задаст не менее трёх уточняющих вопросов и соберёт редактируемую карточку.</p>
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-<form method="post" class="form-stack">
-  <label>Отрасль
-    <select name="industry" {% if errors.industry %}class="invalid"{% endif %}>{% for item in INDUSTRIES %}<option value="{{ item }}" {% if item == industry %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+<form method="post" class="form-stack new-form">
+  <fieldset class="chips-field{% if errors.industry %} invalid{% endif %}">
+    <legend>Отрасль</legend>
+    <div class="chips">
+      {% for item in INDUSTRIES %}
+      <label class="chip"><input type="radio" name="industry" value="{{ item }}" {% if item == industry or (not industry and loop.first) %}checked{% endif %}><span>{{ item }}</span></label>
+      {% endfor %}
+    </div>
     {% if errors.industry %}<span class="field-error">{{ errors.industry }}</span>{% endif %}
+  </fieldset>
+  <label class="draft-box">Черновик задачи
+    <textarea name="text" rows="8" required maxlength="6000" data-limit="4000" placeholder="Что происходит сейчас, что нужно решить и для кого?" {% if errors.text %}class="invalid"{% endif %}>{{ text or '' }}</textarea>
+    {% if errors.text %}<span class="field-error">{{ errors.text }}</span>{% else %}<span class="hint"><span class="counter-live" data-for="text">0</span> / 4000 символов · пары фраз достаточно</span>{% endif %}
   </label>
-  <label>Черновик задачи
-    <textarea name="text" rows="9" required placeholder="Что происходит сейчас, что нужно решить и для кого?" {% if errors.text %}class="invalid"{% endif %}>{{ text or '' }}</textarea>
-    {% if errors.text %}<span class="field-error">{{ errors.text }}</span>{% else %}<span class="hint">До 4000 символов.</span>{% endif %}
-  </label>
-  <button type="submit">Получить уточняющие вопросы</button>
+  <button type="submit" class="big-go">Получить уточняющие вопросы <span class="arr">→</span></button>
 </form>
 {% endblock %}
