@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{% if kind == 'student' %}Навигатор студента{% else %}AI-тренер задачи{% endif %} · AI Sana{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/assistants.css">
+<script src="/static/assistants.js" defer></script>
+<div class="assistant-heading">
+  <span class="assistant-eyebrow">AI SANA / {{ 'ДЛЯ СТУДЕНТА' if kind == 'student' else 'ДЛЯ БИЗНЕСА' }}</span>
+  <h1>{{ 'Найди задачу.' if kind == 'student' else 'Сделай задачу сильнее.' }} <em>{{ 'Начни своё решение.' if kind == 'student' else 'Шаг за шагом.' }}</em></h1>
+  <p class="lede">{% if kind == 'student' %}Расскажи о навыках и интересах. Помощник найдёт варианты в каталоге, покажет факты и поможет подготовить первый шаг.{% else %}{{ card.title }} · Выполняйте задания по реальным пробелам, проверяйте изменения и поднимайте готовность карточки.{% endif %}</p>
+  <a href="{{ '/catalog' if kind == 'student' else '/business/cards/' ~ card.id ~ '/edit' }}">← {{ 'Весь каталог' if kind == 'student' else 'Назад в редактор' }}</a>
+</div>
+<div class="assistant-layout" data-kind="{{ kind }}" {% if card %}data-card-id="{{ card.id }}"{% endif %}>
+  <section class="assistant-workspace">
+    <div id="assistant-conversation" aria-label="Ваши уточнения"></div>
+    <form method="post" action="{{ '/assistants/student' if kind == 'student' else '/business/cards/' ~ card.id ~ '/coach' }}" id="assistant-form" class="assistant-panel form-stack">
+      <label for="assistant-message">{{ 'Что тебе интересно?' if kind == 'student' else 'С чем помочь?' }}</label>
+      <textarea id="assistant-message" name="message" rows="3" maxlength="1200" {% if kind == 'student' %}required minlength="2"{% endif %} placeholder="{{ 'Например: знаю Python, хочу задачу про образование и чат-ботов' if kind == 'student' else 'Например: какие данные нужно подготовить для команды?' }}">{{ query }}</textarea>
+      <input type="hidden" name="history" value="{{ history|tojson|forceescape }}">
+      {% if kind == 'student' %}
+      <label>Или добавь профиль команды
+        <select name="team_id"><option value="">Без профиля</option>{% for team in teams %}<option value="{{ team.id }}" {% if selected_team == team.id %}selected{% endif %}>{{ team.name }}</option>{% endfor %}</select>
+      </label>
+      <div class="assistant-chips" aria-label="Примеры запросов"><button type="button" data-query="Хочу задачу про образование и чат-ботов">Образование + боты</button><button type="button" data-query="Интересует анализ данных и прогнозирование">Анализ данных</button><button type="button" data-query="Хочу улучшать логистику">Логистика</button></div>
+      {% endif %}
+      <div class="assistant-actions"><button type="submit" class="primary">{{ 'Подобрать задачи' if kind == 'student' else 'Спросить AI-тренера' }} →</button>{% if kind == 'student' %}<a href="/assistants/student">Новый диалог</a>{% endif %}</div>
+      <p id="assistant-status" class="muted" role="status"></p>
+    </form>
+    <div id="assistant-results" aria-live="polite">
+    {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+    {% if result %}
+      <div class="assistant-mode">{{ 'AI · ' ~ result.mode if result.mode not in ['stub', 'rules'] else ('Локальный помощник · без LLM' if result.mode == 'stub' else 'Проверено правилами') }}{% if result.mode_note %} · {{ result.mode_note }}{% endif %}</div>
+      <details class="assistant-trace"><summary>Как получен результат</summary><ol>{% for step in result.trace %}<li>{{ step }}</li>{% endfor %}</ol></details>
+      {% if kind == 'student' %}
+      <h2>{{ result.message }}</h2>
+      <div class="assistant-matches">
+      {% for task in result.cards %}
+      <article class="assistant-match">
+        <div class="assistant-match-top"><span>{{ task.industry }}</span><b>{{ task.score }}/100 · {{ task.level_label }}</b></div>
+        <h3><a href="{{ task.url }}">{{ task.title }}</a></h3>
+        <p class="muted">Основание подбора · {{ task.evidence_label }}</p><blockquote>{{ task.evidence }}</blockquote>
+        {% if task.needs_confirmation %}<p class="notice warn">Есть неподтверждённые правки. Уточните детали у бизнеса.</p>{% endif %}
+        <details><summary>Что уточнить перед откликом</summary>{% for question in task.questions %}<p>{{ question }}</p>{% else %}<p>Согласуйте доступ к данным, объём работы и критерии приёмки с бизнесом.</p>{% endfor %}</details>
+        <div class="assistant-actions"><a class="btn-ghost" href="{{ task.url }}#proposals">Открыть задачу →</a><button type="button" data-plan="{{ task.id }}">План старта</button><label class="assistant-compare-choice"><input type="checkbox" data-compare="{{ task.id }}"> Сравнить</label></div>
+      </article>
+      {% endfor %}
+      </div>
+      <p>{{ result.follow_up }}</p>
+      {% else %}
+      <div class="assistant-score-strip"><strong>{{ result.rating.score }}<small>/100</small></strong><div>{{ result.rating.level_label }}<p>{% if result.next_at %}До следующей цели {{ result.next_at }}: ещё {{ result.remaining }} баллов{% else %}Все показатели заполнены{% endif %}</p></div></div>
+      <p class="assistant-question">{{ result.question }}</p>
+      <p class="muted">{{ result.notice }}</p>
+      <h2>Маршрут к следующему уровню</h2>
+      {% for mission in result.missions %}
+      <article class="assistant-mission">
+        <div><span class="assistant-gain">до +{{ mission.gain }}</span>{% if mission.key in result.roadmap %}<span class="assistant-roadmap">Ближайшая цель</span>{% endif %}</div>
+        <h3>{{ mission.label }}</h3><p>{{ mission.hint }}</p><p class="muted">{{ mission.question }}</p>
+        <div class="assistant-actions"><a href="/business/cards/{{ card.id }}/edit#field-{{ mission.fields[0] }}">Дополнить в редакторе →</a><button type="button" data-preview-field="{{ mission.fields[0] }}">Проверить идею</button></div>
+      </article>
+      {% else %}<p class="notice info">Карточка полностью заполнена. Проверьте достоверность и подтвердите её в редакторе.</p>{% endfor %}
+      {% endif %}
+    {% elif kind == 'student' %}
+      <div class="assistant-empty"><h2>От интереса — к первому прототипу</h2><p>Подбор по каталогу → сравнение фактов → вопросы бизнесу → план старта.</p><p>Рекомендации доступны для опубликованных задач от 40 баллов. Весь каталог всегда открыт.</p></div>
+    {% endif %}
+    </div>
+  </section>
+  <aside class="assistant-side">
+  {% if kind == 'student' %}
+    <section class="assistant-panel"><h2>Твой выбор</h2><p>Отметь до трёх задач, чтобы сравнить данные, ограничения и ожидаемые результаты.</p><button type="button" id="assistant-compare">Сравнить выбранные</button><div id="assistant-comparison" aria-live="polite"></div></section>
+    <section class="assistant-panel" id="assistant-plan" aria-live="polite"><h2>План старта</h2><p>Открой план у интересной задачи. Помощник предложит этапы и шаблон отклика для обсуждения.</p></section>
+  {% else %}
+    <section class="assistant-panel" id="assistant-sandbox">
+      <h2>Проверь правку</h2><p>Добавь только реальные сведения. Предпросмотр считает балл, но ничего не сохраняет.</p>
+      <form method="post" action="/business/cards/{{ card.id }}/coach/preview" id="assistant-preview-form" class="form-stack">
+        <label>Поле<select name="field">{% for key, label in field_labels.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+        <label>Новый текст<textarea name="value" rows="5" maxlength="2000">{{ card.title }}</textarea></label>
+        <button type="submit">Проверить рейтинг →</button>
+      </form>
+      <div id="assistant-preview-result" role="status">{% if preview %}<p>{{ preview.before }} → {{ preview.after }} ({{ '%+d'|format(preview.delta) }}) · {{ preview.level_label }}</p><p>{{ preview.notice }}</p>{% endif %}</div>
+      <button type="button" id="assistant-transfer" hidden>Перенести правки в редактор</button>
+      <script type="application/json" id="assistant-card-fields">{{ dict(title=card.title, context=card.context, need=card.need, users=card.users, data=card.data, constraints=card.constraints, expected_result=card.expected_result, success_criteria=card.success_criteria, contact=card.contact, interaction_format=card.interaction_format)|tojson }}</script>
+    </section>
+    <section class="assistant-panel"><h3>Проверить взглядом команды</h3><p>После заполнения пройдите испытание: виртуальная команда покажет, где ей ещё не хватает сведений.</p><a href="/business/cards/{{ card.id }}/trial">Испытать задачу →</a></section>
+  {% endif %}
+  </aside>
+</div>
+{% endblock %}

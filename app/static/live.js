@@ -124,12 +124,70 @@
       const position = el('p', '', 'live-position');
       (document.querySelector('.gauge-foot') || scoreNode.parentElement).after(position);
       poll(async () => {
-        const data = await getJSON('/catalog.json'), own = data.cards.find(c => c.id === editor[1]);
-        // Для существующей карточки дата публикации при подтверждении НЕ меняется.
-        const ahead = data.cards.filter(c => c.id !== editor[1] && (c.score > to || (c.score === to && own && (c.published_at || '') > (own.published_at || ''))));
-        const next = ahead.length + 1, total = data.total + (own ? 0 : 1);
-        position.textContent = `${own ? `Сейчас ${own.position} из ${data.total} → ` : ''}После подтверждения: ${next} из ${total}. По сохранённым полям.`;
+        const data = await getJSON(`/business/cards/${encodeURIComponent(editor[1])}/position.json?score=${to}`);
+        position.textContent = `${data.current_position ? `Сейчас ${data.current_position} из ${data.total} → ` : ''}После подтверждения: ${data.position} из ${data.total}. По сохранённым полям.`;
       }, 5000);
     }
   }
+})();
+
+// Входы в помощников: не меняют шаблоны, которыми параллельно владеет поверхность.
+(() => {
+  const path = location.pathname;
+  const edit = path.match(/^\/business\/cards\/([^/]+)\/edit$/);
+  const task = path.match(/^\/tasks\/([^/]+)$/);
+  if (!(path === '/' || path === '/catalog' || edit || task)) return;
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/static/assistants.css'; document.head.append(css);
+  const launch = document.createElement('section'); launch.className = 'assistant-launch';
+  const text = document.createElement('span');
+  text.textContent = edit ? 'Что дополнить дальше? Проверьте правку и её влияние на рейтинг.' : 'Найдите подходящую задачу, сравните варианты и подготовьте план старта.';
+  const link = document.createElement('a'); link.href = edit ? `/business/cards/${edit[1]}/coach` : '/assistants/student';
+  link.textContent = edit ? 'AI-тренер задачи →' : 'AI-навигатор студента →';
+  launch.append(text, link);
+  document.querySelector('main h1')?.after(launch);
+  if (task) { const coach = document.createElement('a'); coach.href = `/business/cards/${task[1]}/coach`; coach.textContent = 'Бизнесу: улучшить карточку →'; launch.append(coach); }
+  if (task) {
+    try {
+      const key = `aisana-proposal-${task[1]}`, raw = sessionStorage.getItem(key);
+      const proposalForm = document.querySelector('.proposal-form');
+      if (raw && proposalForm) {
+        const draft = JSON.parse(raw), note = document.createElement('p'), button = document.createElement('button');
+        note.className = 'notice info'; note.textContent = 'Готов черновик из AI-наставника. Перенесите его и проверьте перед отправкой. ';
+        button.type = 'button'; button.textContent = 'Заполнить пустые поля черновиком'; note.append(button); proposalForm.before(note);
+        button.addEventListener('click', () => {
+          let count = 0;
+          for (const key of ['idea', 'plan']) {
+            const input = proposalForm.elements.namedItem(key);
+            if (input && !input.value.trim() && typeof draft[key] === 'string') { input.value = draft[key]; count++; input.dispatchEvent(new Event('input', {bubbles:true})); }
+          }
+          sessionStorage.removeItem(key);
+          note.textContent = `Заполнено полей: ${count}. Выберите команду, проверьте и отправьте отклик самостоятельно. Уже заполненные поля сохранены.`;
+        });
+      }
+    } catch (_) {}
+  }
+  if (!edit) return;
+  const form = document.getElementById('card-form');
+  if (!form) return;
+  try {
+    const key = `aisana-coach-${edit[1]}`, raw = sessionStorage.getItem(key);
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+    const note = document.createElement('p'); note.className = 'notice info'; note.setAttribute('role', 'status');
+    const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Применить проверенные правки к полям';
+    note.textContent = 'В AI-тренере подготовлены правки. Примените их, проверьте и сохраните самостоятельно. ';
+    note.append(button); form.before(note);
+    button.addEventListener('click', () => {
+      const conflicts = [], applied = [];
+      for (const [field, value] of Object.entries(payload.fields || {})) {
+        const input = form.elements.namedItem(field);
+        if (!input || typeof value !== 'string' || !Object.hasOwn(payload.original || {}, field)) continue;
+        if (input.value !== payload.original[field]) { conflicts.push(field); continue; }
+        input.value = value; input.dispatchEvent(new Event('input', {bubbles:true})); applied.push(field);
+      }
+      sessionStorage.removeItem(key);
+      note.textContent = `Перенесено полей: ${applied.length}. Сохраните и пересчитайте, затем подтвердите карточку.${conflicts.length ? ` Полей с более новыми правками: ${conflicts.length}; они сохранены без изменений.` : ''}`;
+      const confirmed = form.elements.namedItem('confirmed'); if (confirmed) confirmed.checked = false;
+    });
+  } catch (_) { /* Недоступное хранилище браузера не мешает редактору. */ }
 })();

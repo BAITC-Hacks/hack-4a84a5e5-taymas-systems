@@ -16,7 +16,10 @@ from app.models import INDUSTRIES, LEVEL_LABELS
 from app.store import get_store
 from app.trial import trial_badge
 
+from app.web_assistants import router as assistants_router
+
 router = APIRouter()
+router.include_router(assistants_router)
 
 
 def _clean_choice(value: str | None, allowed) -> str:
