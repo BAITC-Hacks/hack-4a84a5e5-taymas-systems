@@ -44,6 +44,8 @@
         <span class="badge badge-{{ card.level }}">{{ card.level_label }}</span>
         {% if card.level == "draft" %}<span class="warn">требует уточнения</span>{% endif %}
         {% if card.level == "priority" %}<span class="star">приоритетная задача</span>{% endif %}
+        {% set count = proposal_counts.get(card.id, 0) %}
+        <span class="proposal-count">{% if count %}откликов: {{ count }}{% else %}откликов пока нет{% endif %}</span>
       </div>
       {% if card.need %}<p class="task-need">{{ card.need }}</p>{% endif %}
     </div>

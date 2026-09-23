@@ -15,7 +15,14 @@
       {% if not card.confirmed %}<span class="warn">есть неподтверждённые правки</span>{% endif %}
     </div>
   </div>
-  <div class="score big" title="Подтверждённый рейтинг готовности">{{ card.score }}<span>/100</span></div>
+  <div class="score-block">
+    <div class="score big" title="Подтверждённый рейтинг готовности">{{ card.score }}<span>/100</span></div>
+    {% if position %}
+    <p class="position">Позиция в каталоге: <strong>{{ position }}</strong> из {{ catalog_size }}</p>
+    {% else %}
+    <p class="position muted">В каталоге не показывается</p>
+    {% endif %}
+  </div>
 </header>
 
 <p class="edit-link"><a href="/business/cards/{{ card.id }}/edit">Редактировать карточку (представитель бизнеса)</a></p>

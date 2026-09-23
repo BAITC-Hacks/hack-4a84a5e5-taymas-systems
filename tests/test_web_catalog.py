@@ -241,3 +241,61 @@ def test_no_safe_filter_in_templates():
         if "|safe" in p.read_text(encoding="utf-8") or "Markup(" in p.read_text(encoding="utf-8")
     ]
     assert not offenders, offenders
+
+
+# --- позиция в каталоге и число откликов (HAC-39) --------------------------
+
+
+def test_task_page_shows_catalog_position(client):
+    """Кейс, шаг 5: задача публикуется «на позиции, соответствующей её рейтингу»."""
+    from app.store import get_store
+
+    store = get_store()
+    size = len(store.list_cards())
+
+    # Карточка с максимальным баллом стоит первой.
+    r = client.get("/tasks/c_seed0001")
+    assert f"<strong>1</strong> из {size}" in r.text
+
+    # Карточка с минимальным баллом — последней, но из каталога не исчезает.
+    r = client.get("/tasks/c_seed0005")
+    assert f"<strong>{size}</strong> из {size}" in r.text
+
+
+def test_unpublished_card_reports_no_catalog_position(client):
+    from app.models import Card
+    from app.store import get_store
+
+    store = get_store()
+    store.add_card(Card(id="c_draft", title="Неопубликованная", status="draft", score=10, level="draft"))
+    r = client.get("/tasks/c_draft")
+    assert r.status_code == 200
+    assert "В каталоге не показывается" in r.text
+
+
+def test_position_changes_after_confirmed_edit(client):
+    """Рейтинг влияет на позицию: подтверждённый рост поднимает задачу."""
+    from app.store import get_store
+
+    store = get_store()
+    card = store.get_card("c_seed0005")  # 20 баллов, последняя
+    size = len(store.list_cards())
+    assert f"<strong>{size}</strong> из {size}" in client.get("/tasks/c_seed0005").text
+
+    # 95 баллов — впереди остаётся только сид-карточка со 100, значит вторая позиция.
+    card.score, card.level = 95, "priority"
+    store.update_card(card)
+    assert f"<strong>2</strong> из {size}" in client.get("/tasks/c_seed0005").text
+
+
+def test_catalog_shows_proposal_counts(client):
+    r = client.get("/catalog")
+    assert "откликов: 2" in r.text  # c_seed0001 из сида
+    assert "откликов пока нет" in r.text  # c_seed0005 без откликов
+
+    client.post(
+        "/tasks/c_seed0005/proposals",
+        data={"team_id": "t_seed0001", "idea": "Идея решения", "plan": "План работ"},
+        follow_redirects=False,
+    )
+    assert "откликов: 1" in client.get("/catalog").text

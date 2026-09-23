@@ -40,6 +40,11 @@
 .star { color: #1a3f8f; font-size: 12px; font-weight: 600; }
 .empty { color: #55606d; background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 20px; }
 
+.score-block { text-align: right; }
+.position { margin: 4px 0 0; font-size: 13px; color: #55606d; white-space: nowrap; }
+.position.muted { color: var(--muted); }
+.proposal-count { color: #55606d; }
+
 .breadcrumb a { color: #55606d; text-decoration: none; font-size: 14px; }
 .task-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
 .task-head h1 { margin-bottom: 4px; }

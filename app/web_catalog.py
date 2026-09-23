@@ -85,6 +85,10 @@ def catalog(request: Request, industry: str = "", level: str = ""):
     level = _clean_choice(level, LEVEL_LABELS)
     shown = store.list_cards(industry=industry or None, level=level or None)
     total = len(store.list_cards())
+    # Одним проходом по всем откликам, а не по запросу на карточку в шаблоне.
+    proposal_counts: dict[str, int] = {}
+    for proposal in store.proposals.values():
+        proposal_counts[proposal.card_id] = proposal_counts.get(proposal.card_id, 0) + 1
     return templates.TemplateResponse(
         request,
         "catalog.html",
@@ -92,6 +96,7 @@ def catalog(request: Request, industry: str = "", level: str = ""):
             "cards": shown,
             "shown": len(shown),
             "total": total,
+            "proposal_counts": proposal_counts,
             "industry": industry,
             "level": level,
             "ai_mode": ai.ai_mode(),
@@ -106,9 +111,15 @@ def _task_context(request: Request, card_id: str, *, error: str = "", form: dict
         raise HTTPException(status_code=404, detail="Задача не найдена")
     proposals = store.list_proposals(card.id)
     teams = {t.id: t for t in store.list_teams()}
+    # Кейс, шаг 5: задача публикуется «на позиции, соответствующей её рейтингу».
+    # Показываем эту позицию там, где пользователь оказывается сразу после публикации.
+    published = store.list_cards()
+    position = next((i + 1 for i, c in enumerate(published) if c.id == card.id), None)
     return {
         "request": request,
         "card": card,
+        "position": position,
+        "catalog_size": len(published),
         "rating": compute_rating(card),
         "proposals": [(p, teams.get(p.team_id)) for p in proposals],
         "teams": store.list_teams(),
