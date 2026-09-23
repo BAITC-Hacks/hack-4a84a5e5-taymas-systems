@@ -43,6 +43,37 @@ _STUB_QUESTIONS: dict[str, str] = {
     "interaction_format": "В каком формате и как часто удобно обсуждать задачу с командой?",
 }
 
+# Отраслевые примеры для заглушки: без ключа API вопрос всё равно должен звучать
+# как заданный про эту задачу, а не как строка из анкеты (критерий кейса «вопросы уместны»).
+_INDUSTRY_USERS: dict[str, str] = {
+    "Образование": "студенты, преподаватели, сотрудники деканата",
+    "Финансы": "клиенты, операционисты, риск-менеджеры",
+    "Ритейл": "покупатели, продавцы, категорийные менеджеры",
+    "Логистика": "курьеры, диспетчеры, получатели заказов",
+    "Медицина": "пациенты, врачи, администраторы регистратуры",
+    "Госуслуги": "жители, операторы приёма, профильные специалисты",
+    "Промышленность": "операторы линии, мастера смены, технологи",
+}
+
+_INDUSTRY_DATA: dict[str, str] = {
+    "Образование": "журналы, расписание, обращения студентов",
+    "Финансы": "выписки, заявки, история платежей",
+    "Ритейл": "чеки, остатки, история продаж",
+    "Логистика": "маршруты, накладные, треки доставок",
+    "Медицина": "расписание приёма, обезличенные карты, записи",
+    "Госуслуги": "обращения граждан, реестры, регламенты",
+    "Промышленность": "показания датчиков, журналы смен, спецификации",
+}
+
+# Вводные слова, с которых бизнес обычно начинает черновик: в цитату они не несут смысла.
+_FILLER_PREFIX = {
+    "хотим", "хочу", "нужен", "нужна", "нужно", "необходим", "необходимо", "требуется",
+    "надо", "нам", "мы", "у", "нас", "есть", "сделать", "создать", "разработать", "чтобы",
+}
+
+_QUOTE_WORDS = 4
+_MIN_QUOTE_WORDS = 2
+
 _MIN_QUESTIONS = 3
 _MAX_QUESTIONS = 6
 _FIELD_ENOUGH_LEN = 15  # поле уже достаточно раскрыто в черновике — не переспрашиваем
@@ -71,7 +102,7 @@ def generate_questions(draft_text: str, industry: str) -> list[Question]:
     preliminary = CardFields(context=draft_text.strip())
     if not llm_available():
         _set_fallback_reason(None)
-        return _stub_questions(preliminary)
+        return _stub_questions(preliminary, industry)
 
     questions: list[Question] | None
     try:
@@ -79,7 +110,7 @@ def generate_questions(draft_text: str, industry: str) -> list[Question]:
     except (LLMConfigError, LLMResponseError) as exc:
         logger.warning("LLM недоступен для генерации вопросов, включена заглушка: %s", exc)
         _set_fallback_reason(f"Вопросы: LLM недоступен, использована заглушка ({exc})")
-        return _stub_questions(preliminary)
+        return _stub_questions(preliminary, industry)
 
     if questions is not None:
         _set_fallback_reason(None)
@@ -87,7 +118,7 @@ def generate_questions(draft_text: str, industry: str) -> list[Question]:
 
     logger.warning("Ответ LLM не прошёл валидацию вопросов, включена заглушка")
     _set_fallback_reason("Вопросы: ответ LLM не прошёл валидацию, использована заглушка")
-    return _stub_questions(preliminary)
+    return _stub_questions(preliminary, industry)
 
 
 def build_card(draft_text: str, industry: str, answers: list[Answer]) -> CardFields:
@@ -195,9 +226,48 @@ def _validate_llm_questions(questions: list[Question]) -> list[Question] | None:
     return valid[:_MAX_QUESTIONS]
 
 
-def _stub_questions(card: CardFields) -> list[Question]:
-    """По показателям с недобором — по одному вопросу на поле, в порядке величины недобора."""
+def _draft_quote(text: str) -> str:
+    """Короткая цитата из черновика для подстановки в вопрос.
+
+    Берём первые осмысленные слова, пропустив вводные («хотим», «нужен», «чтобы»).
+    Если осмысленного мало — возвращаем пустую строку и вопрос остаётся типовым:
+    лучше честный шаблон, чем цитата из мусора.
+    """
+    text = (text or "").strip()
+    matches = list(_WORD_RE.finditer(text))
+    skip = 0
+    while skip < len(matches) and matches[skip].group().lower() in _FILLER_PREFIX:
+        skip += 1
+    kept = matches[skip : skip + _QUOTE_WORDS]
+    if len(kept) < _MIN_QUOTE_WORDS:
+        return ""
+    # Срез исходной строки, а не склейка слов: сохраняются дефисы и запятые внутри фразы.
+    quote = text[kept[0].start() : kept[-1].end()]
+    return quote.strip(" ,;:—-")
+
+
+def _stub_question_text(field: str, industry: str, quote: str, partial: bool) -> str:
+    """Типовой вопрос, приправленный контекстом задачи: цитатой, отраслью, пометкой о недоборе."""
+    base = _STUB_QUESTIONS[field]
+    if partial:
+        base = f"Это описано частично. {base}"
+    elif quote:
+        base = f"Вы написали «{quote}». {base}"
+    examples = _INDUSTRY_USERS.get(industry) if field == "users" else _INDUSTRY_DATA.get(industry) if field == "data" else None
+    if examples:
+        base = f"{base} Например: {examples}."
+    return base
+
+
+def _stub_questions(card: CardFields, industry: str = "") -> list[Question]:
+    """По показателям с недобором — по одному вопросу на поле, в порядке величины недобора.
+
+    Формулировка привязана к конкретной задаче: цитата из черновика в первом вопросе,
+    отраслевые примеры там, где они помогают, и пометка, если показатель уже описан частично.
+    """
     rating = compute_rating(card)
+    quote = _draft_quote(card.context)
+    quote_used = False
     gaps = sorted(
         (item for item in rating.items if item.awarded < item.weight),
         key=lambda item: item.weight - item.awarded,
@@ -211,9 +281,14 @@ def _stub_questions(card: CardFields) -> list[Question]:
                 continue
             if len(getattr(card, field, "").strip()) >= _FIELD_ENOUGH_LEN:
                 continue
-            questions.append(
-                Question(field=field, question=_STUB_QUESTIONS[field], why=f"{item.label} — {item.weight} баллов")
-            )
+            partial = item.awarded > 0
+            text = _stub_question_text(field, industry, "" if quote_used else quote, partial)
+            if not partial and quote and not quote_used:
+                quote_used = True
+            why = f"{item.label} — {item.weight} баллов"
+            if partial:
+                why = f"{why}, начислено {item.awarded}"
+            questions.append(Question(field=field, question=text, why=why))
             seen_fields.add(field)
             if len(questions) >= _MAX_QUESTIONS:
                 return questions
@@ -222,7 +297,11 @@ def _stub_questions(card: CardFields) -> list[Question]:
             if field in seen_fields or field not in _STUB_QUESTIONS:
                 continue
             questions.append(
-                Question(field=field, question=_STUB_QUESTIONS[field], why="Поле не заполнено")
+                Question(
+                    field=field,
+                    question=_stub_question_text(field, industry, "", False),
+                    why="Поле не заполнено",
+                )
             )
             seen_fields.add(field)
             if len(questions) >= _MIN_QUESTIONS:

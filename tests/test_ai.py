@@ -332,3 +332,71 @@ def test_fallback_reason_is_none_after_successful_card_build(monkeypatch):
     ai.build_card(_DRAFT, "Образование", answers)
 
     assert ai.last_fallback_reason is None
+
+
+# --- уместность вопросов заглушки (HAC-33) ---------------------------------
+
+DRAFT_EDU = "Хотим чат-бота для студентов, чтобы отвечал на вопросы."
+DRAFT_LOG = "Курьеры опаздывают, клиенты жалуются. Нужно что-то с маршрутами."
+
+
+def test_stub_quotes_the_draft():
+    """Критерий кейса «вопросы уместны»: без ключа вопрос всё равно про эту задачу."""
+    from app.ai import generate_questions
+
+    questions = generate_questions(DRAFT_EDU, "Образование")
+    quoted = [q for q in questions if "чат-бота для студентов" in q.question]
+    assert quoted, [q.question for q in questions]
+    assert "Вы написали" in quoted[0].question
+
+
+def test_stub_questions_differ_between_drafts():
+    from app.ai import generate_questions
+
+    edu = {q.question for q in generate_questions(DRAFT_EDU, "Образование")}
+    log = {q.question for q in generate_questions(DRAFT_LOG, "Логистика")}
+    assert edu != log
+    # Отраслевые примеры не путаются между собой.
+    assert any("студенты, преподаватели" in q for q in edu)
+    assert any("курьеры, диспетчеры" in q for q in log)
+    assert not any("курьеры" in q for q in edu)
+
+
+def test_stub_marks_partially_covered_indicator():
+    """Черновик уже даёт контекст — про него не спрашивают с нуля."""
+    from app.ai import generate_questions
+
+    questions = generate_questions(DRAFT_EDU, "Образование")
+    partial = [q for q in questions if q.field == "need"]
+    assert partial and "частично" in partial[0].question
+    assert "начислено" in partial[0].why
+
+
+def test_stub_quote_skipped_for_meaningless_draft():
+    """Мусор в черновике не должен попадать в вопрос цитатой."""
+    from app.ai import _draft_quote, generate_questions
+
+    assert _draft_quote("😀😀😀") == ""
+    assert _draft_quote("нужно") == ""
+    questions = generate_questions("😀😀😀", "Другое")
+    assert len(questions) >= 3
+    assert not any("Вы написали" in q.question for q in questions)
+
+
+def test_stub_quote_preserves_punctuation_inside_phrase():
+    from app.ai import _draft_quote
+
+    assert _draft_quote(DRAFT_EDU) == "чат-бота для студентов"
+    assert _draft_quote(DRAFT_LOG) == "Курьеры опаздывают, клиенты жалуются"
+
+
+def test_stub_questions_cover_distinct_fields_for_any_input():
+    """Три разных вопроса по трём разным полям — на любом входе, включая мусор."""
+    from app.ai import generate_questions
+
+    for draft in [DRAFT_EDU, "ааааааааа", "😀", "x" * 4000, "<script>alert(1)</script>", ""]:
+        questions = generate_questions(draft, "Другое")
+        assert len(questions) >= 3, draft[:30]
+        fields = [q.field for q in questions]
+        assert len(set(fields)) == len(fields), fields
+        assert all(q.question.strip() for q in questions)
