@@ -13,10 +13,11 @@
   <li class="{% if published %}done{% endif %}" data-n="5">Каталог</li>
 </ol>
 <h1>{% if next_at %}Доведите карточку до уровня <em>«{{ next_label }}»</em>{% else %}Карточка на <em>максимуме</em>{% endif %}</h1>
-<p class="lede">
-  Семь показателей рейтинга — плитки ниже. Дополните поле конкретикой и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.
-  {% if published %}Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.{% endif %}
-</p>
+<details class="more lede-more">
+  <summary>Как работать с карточкой</summary>
+  <p>Семь показателей рейтинга — плитки ниже, нажмите на плитку, чтобы перейти к полю. Дополните поле конкретикой и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.</p>
+</details>
+{% if published %}<p class="lede">Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.</p>{% endif %}
 
 {% if change %}
 <p class="notice info change-note"><span class="agent-chip">пересчёт</span> Предварительный рейтинг пересчитан: было {{ change.before }} → стало {{ change.after }}. {{ message }}</p>
@@ -94,6 +95,7 @@
       <div class="gauge-top">
         <span class="k">Предварительный балл</span>
         <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
+        <button type="button" class="help-btn" data-open="rating-help" aria-label="Как считается рейтинг" title="Как считается рейтинг">?</button>
       </div>
       {% set from_score = change.before if change else s %}
       <div class="gauge" style="--from:{{ from_score }}; --to:{{ s }}">
@@ -133,11 +135,13 @@
     <section class="quests missing-box">
       <h3>Что добавить: +{{ gain }} {{ "балл" if gain % 10 == 1 and gain != 11 else ("балла" if gain % 10 in [2, 3, 4] and gain not in [12, 13, 14] else "баллов") }} ждут</h3>
       {% for item in rating["items"]|sort(attribute="weight", reverse=True) if item.hint %}
-      <div class="quest" style="--i:{{ loop.index0 }}">
-        <span class="plus">+{{ item.weight - item.awarded }}</span>
-        <span class="txt"><b>{{ item.label }}.</b> {{ item.hint }}</span>
-        <button type="button" data-go="{{ item_fields[item.key] }}">Заполнить →</button>
-      </div>
+      <details class="quest" style="--i:{{ loop.index0 }}"{% if loop.first %} open{% endif %}>
+        <summary><span class="plus">+{{ item.weight - item.awarded }}</span><b>{{ item.label }}</b></summary>
+        <div class="quest-body">
+          <span class="txt">{{ item.hint }}</span>
+          <button type="button" data-go="{{ item_fields[item.key] }}">Заполнить →</button>
+        </div>
+      </details>
       {% endfor %}
     </section>
     {% else %}

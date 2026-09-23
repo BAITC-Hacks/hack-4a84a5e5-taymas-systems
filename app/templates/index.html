@@ -3,8 +3,30 @@
 <section class="home-hero">
   <span class="eyebrow">AI Sana · бизнес-задачи для студенческих команд</span>
   <h1>От сырой идеи до <em>готовой задачи</em>, которую хотят решать</h1>
-  <p class="lede">Бизнес описывает задачу как умеет — система задаёт уточняющие вопросы, собирает карточку и считает рейтинг готовности. Команды выбирают задачи в каталоге и откликаются, бизнес сам решает, с кем работать.</p>
+  <p class="lede">Бизнес описывает задачу как умеет — ИИ-агент задаёт уточняющие вопросы и собирает карточку с рейтингом готовности.</p>
+  <div class="hero-actions">
+    <button type="button" class="btn-ghost" data-open="tour">Как это работает · 1 минута</button>
+    <button type="button" class="btn-link" data-open="rating-help">Как считается рейтинг</button>
+  </div>
 </section>
+
+<dialog class="modal" id="tour" aria-labelledby="tour-title">
+  <button type="button" class="modal-x" data-close aria-label="Закрыть">×</button>
+  <span class="eyebrow">Демо за минуту</span>
+  <h2 id="tour-title">Путь задачи — от пары фраз до откликов команд</h2>
+  <ol class="tour-steps">
+    <li class="on"><b>01</b><div><strong>Бизнес пишет черновик</strong><p>Пара фраз своими словами и отрасль. Шаблонов и обязательных полей нет.</p></div></li>
+    <li><b>02</b><div><strong>ИИ-агент задаёт вопросы</strong><p>Только о том, чего не хватает: данные, срок, критерий успеха. На любой можно не отвечать.</p></div></li>
+    <li><b>03</b><div><strong>Карточка и рейтинг</strong><p>Семь показателей, 100 баллов. Видно, за что начислено и что добавить.</p></div></li>
+    <li><b>04</b><div><strong>Подтверждение</strong><p>Баллы засчитываются только после подтверждения бизнесом — задача уходит в каталог.</p></div></li>
+    <li><b>05</b><div><strong>Команды откликаются</strong><p>Каталог упорядочен по рейтингу, бизнес сам выбирает, с кем работать.</p></div></li>
+  </ol>
+  <div class="tour-nav">
+    <button type="button" class="btn-ghost" data-tour="-1">← Назад</button>
+    <span class="tour-count"><b>1</b> / 5</span>
+    <button type="button" data-tour="1">Далее →</button>
+  </div>
+</dialog>
 
 <div class="entry-grid">
   <a class="entry entry-business tilt" href="/business/new">
@@ -66,5 +88,8 @@
 
 <section id="live-feed" class="live-feed" aria-live="polite"></section>
 
-<p class="rule-note">Рейтинг готовности (0–100) учитывает только заполненные поля, <strong>подтверждённые бизнесом</strong>: после каждого подтверждённого дополнения балл пересчитывается и задача занимает новое место в каталоге.</p>
+<details class="more rule-note">
+  <summary>Почему рейтингу можно верить</summary>
+  <p>Рейтинг готовности (0–100) учитывает только заполненные поля, <strong>подтверждённые бизнесом</strong>: после каждого подтверждённого дополнения балл пересчитывается и задача занимает новое место в каталоге. Считает его сервер по одинаковым правилам — ИИ баллы не выставляет.</p>
+</details>
 {% endblock %}

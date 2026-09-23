@@ -22,6 +22,7 @@
       <a href="/catalog">Каталог задач</a>
       <a class="cta" href="/business/new">Разместить задачу</a>
     </nav>
+    <button type="button" class="help-btn" data-open="rating-help" aria-label="Как считается рейтинг" title="Как считается рейтинг">?</button>
     <div class="palette" role="group" aria-label="Цветотип">
       <button type="button" class="swatch" data-p="night" aria-label="Цветотип «Ночь»" title="Ночь"><i style="background:#0e0f12"></i><i style="background:#c6f432"></i></button>
       <button type="button" class="swatch" data-p="berry" aria-label="Цветотип «Ягода»" title="Ягода"><i style="background:#f7f3f4"></i><i style="background:#a8173f"></i></button>
@@ -32,6 +33,22 @@
   <main class="container">
     {% block content %}{% endblock %}
   </main>
+
+  <dialog class="modal" id="rating-help" aria-labelledby="rating-help-title">
+    <button type="button" class="modal-x" data-close aria-label="Закрыть">×</button>
+    <span class="eyebrow">Рейтинг готовности</span>
+    <h2 id="rating-help-title">Как считаются 100 баллов</h2>
+    <p class="muted small">Считает сервер по правилам, одинаковым для всех задач. Баллы засчитываются только за поля, подтверждённые бизнесом.</p>
+    <ul class="scale-list">
+      {% for key, label, weight, fields in RATING_SCALE %}
+      <li><span>{{ label }}</span><span class="scale-bar"><i style="--w:{{ weight * 5 }}%"></i></span><b>{{ weight }}</b></li>
+      {% endfor %}
+    </ul>
+    <div class="scale-levels">
+      <span class="level-badge lvl-draft">Черновик 0–39</span><span class="level-badge lvl-workable">Рабочая 40–69</span>
+      <span class="level-badge lvl-ready">Готовая 70–89</span><span class="level-badge lvl-priority">Приоритетная 90–100</span>
+    </div>
+  </dialog>
 
   {% set ai_label = ai_status() %}
   <footer class="footer">

@@ -303,3 +303,36 @@
     }
   }
 })();
+
+// Всплывающие окна: кнопки с data-open открывают <dialog>, клик по фону и Esc закрывают.
+(() => {
+  document.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => {
+    const d = document.getElementById(b.dataset.open);
+    if (d && d.showModal && !d.open) d.showModal();
+  }));
+  document.querySelectorAll("dialog.modal").forEach(d => {
+    d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) d.close(); });
+  });
+
+  // Тур «Как это работает»: шаги по кнопкам, при первом визите на главную открывается сам
+  const tour = document.getElementById("tour");
+  if (!tour) return;
+  const steps = tour.querySelectorAll(".tour-steps li"), count = tour.querySelector(".tour-count b");
+  const next = tour.querySelector('[data-tour="1"]'), prev = tour.querySelector('[data-tour="-1"]');
+  let i = 0;
+  const show = n => {
+    i = Math.max(0, Math.min(steps.length - 1, n));
+    steps.forEach((li, j) => li.classList.toggle("on", j === i));
+    count.textContent = i + 1;
+    prev.disabled = i === 0;
+    next.textContent = i === steps.length - 1 ? "Разместить задачу →" : "Далее →";
+  };
+  next.addEventListener("click", () => { if (i === steps.length - 1) location.href = "/business/new"; else show(i + 1); });
+  prev.addEventListener("click", () => show(i - 1));
+  steps.forEach((li, j) => li.addEventListener("click", () => show(j)));
+  tour.addEventListener("close", () => show(0));
+  show(0);
+  try {
+    if (!localStorage.getItem("aisana-tour") && tour.showModal) { setTimeout(() => tour.showModal(), 900); localStorage.setItem("aisana-tour", "1"); }
+  } catch (e) {}
+})();

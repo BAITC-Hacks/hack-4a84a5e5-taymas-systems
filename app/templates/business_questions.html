@@ -12,7 +12,7 @@
   {% for question in draft.questions %}
   <fieldset class="q-card" style="--i:{{ loop.index0 }}">
     <legend><span class="q-num">{{ loop.index }}</span>{{ question.question }}</legend>
-    {% if question.why %}<p class="why">Зачем: {{ question.why }}</p>{% endif %}
+    {% if question.why %}<details class="more why"><summary>Зачем агент спрашивает</summary><p>{{ question.why }}</p></details>{% endif %}
     <textarea name="answer_{{ loop.index0 }}" rows="3" placeholder="Ваш ответ" {% if errors[loop.index0] %}class="invalid"{% endif %}>{{ answers.get(loop.index0, '') }}</textarea>
     {% if errors[loop.index0] %}<span class="field-error">{{ errors[loop.index0] }}</span>{% endif %}
   </fieldset>

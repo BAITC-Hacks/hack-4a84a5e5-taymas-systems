@@ -55,6 +55,7 @@ def ai_status() -> str:
 # У роутера каталога свой объект шаблонов — подвал общий, поэтому глобал ставится в оба.
 for _env in (templates.env, catalog_templates.env):
     _env.globals["ai_status"] = ai_status
+    _env.globals["RATING_SCALE"] = SCALE  # окно «Как считается рейтинг» в шапке
 
 logger = logging.getLogger(__name__)
 
