@@ -1,133 +1,155 @@
 {% extends "base.html" %}
 {% block title %}Редактор карточки · AI Sana Challenge Hub{% endblock %}
 {% block content %}
-<h1>Редактор карточки задачи</h1>
-<p class="muted">
-  Дополните карточку и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.
-  {% if card.status == "published" %}Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.{% endif %}
+{% set published = card.status == "published" %}
+{% set s = rating.score %}
+{% if s < 40 %}{% set next_at, next_label = 40, "Рабочая" %}{% elif s < 70 %}{% set next_at, next_label = 70, "Готовая" %}{% elif s < 90 %}{% set next_at, next_label = 90, "Приоритетная" %}{% else %}{% set next_at, next_label = None, None %}{% endif %}
+{% set gain = rating["items"]|sum(attribute="weight") - s %}
+
+<ol class="steps" aria-label="Путь задачи">
+  <li class="done" data-n="1">Черновик</li><li class="done" data-n="2">Вопросы</li>
+  <li class="{% if published %}done{% else %}now{% endif %}" data-n="3">Карточка</li>
+  <li class="{% if published %}{% if card.confirmed %}done{% else %}now{% endif %}{% endif %}" data-n="4">Подтверждение</li>
+  <li class="{% if published %}done{% endif %}" data-n="5">Каталог</li>
+</ol>
+<h1>{% if next_at %}Прокачай карточку до уровня <em>«{{ next_label }}»</em>{% else %}Карточка на <em>максимуме</em>{% endif %}</h1>
+<p class="lede">
+  Каждый показатель — наклейка. Дополните поле конкретикой и сохраните — рейтинг пересчитается. Баллы засчитываются только после подтверждения.
+  {% if published %}Задача опубликована: <a href="/tasks/{{ card.id }}">открыть в каталоге</a>.{% endif %}
 </p>
 
 {% if change %}
-{% set delta = change.after - change.before %}
-<section class="score-change {% if delta > 0 %}up{% elif delta < 0 %}down{% else %}same{% endif %}">
-  <div>
-    <div class="score-change-label">Предварительный рейтинг пересчитан: было {{ change.before }} → стало {{ change.after }}</div>
-    <div class="score-change-values">
-      <span class="old">{{ change.before }}</span>
-      <span class="arrow">→</span>
-      <span class="new">{{ change.after }}</span>
-      <span class="delta">{% if delta > 0 %}+{% endif %}{{ delta }}</span>
-      <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
-    </div>
-  </div>
-  <div class="score-change-confirmed">
-    <div class="muted small">Подтверждённый балл</div>
-    {% if card.status == "published" %}
-    <div class="confirmed-value">{{ card.score }} <span class="level-badge lvl-{{ card.level }}">{{ card.level_label }}</span></div>
-    {% else %}
-    <div class="confirmed-value">—</div>
-    {% endif %}
-  </div>
-  {% if message %}<p class="score-change-note">{{ message }}</p>{% endif %}
-</section>
+<p class="notice info change-note">Предварительный рейтинг пересчитан: было {{ change.before }} → стало {{ change.after }}. {{ message }}</p>
 {% elif message %}<p class="notice info">{{ message }}</p>{% endif %}
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-{% if card.answers and card.status != "published" and not change %}
+{% if card.answers and not published and not change %}
 <p class="notice {% if answered == 0 %}warn{% else %}info{% endif %}">
   Из ответов на уточняющие вопросы заполнено полей: {{ answered }} из {{ card.answers|length }}.
   {% if answered == 0 %}Вопросы пропущены — карточка собрана только из черновика, дополните её вручную.{% endif %}
 </p>
 {% endif %}
 
-<div class="editor-layout">
-  <form method="post" action="/business/cards/{{ card.id }}/edit" class="form-stack" id="card-form">
-    {% for field in card_fields %}
-    {% set item = field_items.get(field) %}
-    <label>
-      <span class="field-head">
-        {{ field_labels[field] }}
-        {% if item %}<span class="weight-tag {% if item.awarded == item.weight %}full{% elif item.awarded == 0 %}zero{% else %}half{% endif %}" title="Показатель рейтинга: {{ item.label }}">{{ item.label }} · {{ item.awarded }} из {{ item.weight }} баллов</span>{% endif %}
-      </span>
-      {% if field == "title" %}
-      <input type="text" name="title" value="{{ form_card.title }}" placeholder="{{ placeholders[field] }}" {% if errors[field] %}class="invalid"{% endif %}>
-      {% else %}
-      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}" placeholder="{{ placeholders[field] }}" {% if errors[field] %}class="invalid"{% endif %}>{{ form_card[field] }}</textarea>
-      {% endif %}
-      {% if errors[field] %}<span class="field-error">{{ errors[field] }}</span>{% endif %}
-    </label>
-    {% endfor %}
-    <label>Отрасль
-      <select name="industry" {% if errors.industry %}class="invalid"{% endif %}>
-        {% for industry in INDUSTRIES %}
-        <option value="{{ industry }}" {% if industry == form_card.industry %}selected{% endif %}>{{ industry }}</option>
-        {% endfor %}
-      </select>
-      {% if errors.industry %}<span class="field-error">{{ errors.industry }}</span>{% endif %}
-    </label>
-
-    <div class="form-actions">
-      <button type="submit">Сохранить и пересчитать</button>
-    </div>
-
-    <fieldset class="confirm-box">
-      <legend>{% if card.status == "published" %}Подтверждение изменений{% else %}Подтверждение и публикация{% endif %}</legend>
-      <label class="checkbox">
-        <input type="checkbox" name="confirmed" value="on">
-        Подтверждаю, что карточка составлена верно
-      </label>
-      <button type="submit" formaction="/business/cards/{{ card.id }}/publish" class="primary">
-        {% if card.status == "published" %}Подтвердить изменения{% else %}Подтвердить и опубликовать{% endif %}
+<div class="editor">
+  <div class="editor-main">
+    <div class="stickers">
+      {% for item in rating["items"] %}
+      {% set st = "full" if item.awarded == item.weight else ("zero" if item.awarded == 0 else "half") %}
+      <button type="button" class="sticker {{ st }}" style="--i:{{ loop.index0 }}" data-go="{{ item_fields[item.key] }}">
+        <span class="st-state">{% if st == "full" %}Получено{% elif st == "half" %}Наполовину{% else %}Не открыто{% endif %}</span>
+        <span class="st-pts">{% if st == "zero" %}+{{ item.weight }}{% else %}{{ item.awarded }}/{{ item.weight }}{% endif %}</span>
+        <span class="st-name">{{ item.label }}</span>
       </button>
-    </fieldset>
-  </form>
-
-  <aside class="rating-panel">
-    <div class="score-head">
-      <div>
-        <div class="muted small">Предварительный балл</div>
-        <div class="score-big">{{ rating.score }}<span class="muted"> / 100</span></div>
-      </div>
-      <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
+      {% endfor %}
     </div>
-    <p class="small">
-      {% if card.status == "published" %}
-        Подтверждено: <strong>{{ card.score }}</strong> · {{ card.level_label }}
-        {% if card.confirmed %}— совпадает с текущей версией{% else %}— есть неподтверждённые изменения{% endif %}
-      {% else %}
-        Подтверждено: <strong>—</strong> (карточка ещё не опубликована)
-      {% endif %}
-    </p>
 
-    <table class="rating-table">
-      <thead><tr><th>Показатель</th><th class="num">Баллы</th><th>Что добавить</th></tr></thead>
-      <tbody>
-        {% for item in rating.items %}
-        <tr class="{% if item.awarded == item.weight %}full{% elif item.awarded == 0 %}zero{% else %}half{% endif %}">
-          <td>{{ item.label }}</td>
-          <td class="num">{{ item.awarded }}/{{ item.weight }}</td>
-          <td class="small">{{ item.hint or "—" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot><tr><th>Итого</th><th class="num">{{ rating.score }}/100</th><th>{{ rating.level_label }}</th></tr></tfoot>
-    </table>
+    <form method="post" action="/business/cards/{{ card.id }}/edit" class="form-stack card-form" id="card-form">
+      {% for field in card_fields %}
+      {% set item = field_items.get(field) %}
+      <label class="field" id="field-{{ field }}">
+        <span class="field-head">
+          <span>{{ field_labels[field] }}</span>
+          <span class="field-tags">
+            <span class="edited">изменено</span>
+            {% if item %}<span class="weight-tag {% if item.awarded == item.weight %}full{% elif item.awarded == 0 %}zero{% else %}half{% endif %}" title="Показатель рейтинга: {{ item.label }}">{{ item.label }} · {{ item.awarded }} из {{ item.weight }} баллов</span>{% endif %}
+          </span>
+        </span>
+        {% if field == "title" %}
+        <input type="text" name="title" value="{{ form_card.title }}" placeholder="{{ placeholders[field] }}" {% if errors[field] %}class="invalid"{% endif %}>
+        {% else %}
+        <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}4{% else %}3{% endif %}" placeholder="{{ placeholders[field] }}" {% if errors[field] %}class="invalid"{% endif %}>{{ form_card[field] }}</textarea>
+        {% endif %}
+        {% if errors[field] %}<span class="field-error">{{ errors[field] }}</span>{% endif %}
+      </label>
+      {% endfor %}
+      <label class="field">Отрасль
+        <select name="industry" {% if errors.industry %}class="invalid"{% endif %}>
+          {% for industry in INDUSTRIES %}
+          <option value="{{ industry }}" {% if industry == form_card.industry %}selected{% endif %}>{{ industry }}</option>
+          {% endfor %}
+        </select>
+        {% if errors.industry %}<span class="field-error">{{ errors.industry }}</span>{% endif %}
+      </label>
+
+      <div class="form-actions"><button type="submit" class="btn-ghost">Сохранить и пересчитать</button></div>
+
+      <fieldset class="confirm-box">
+        <legend>{% if published %}Подтверждение изменений{% else %}Готово? Подтвердите — и в каталог{% endif %}</legend>
+        <label class="switch">
+          <input type="checkbox" name="confirmed" value="on" id="confirm-toggle">
+          <span class="knob" aria-hidden="true"></span>
+          Подтверждаю, что карточка составлена верно
+        </label>
+        <button type="submit" formaction="/business/cards/{{ card.id }}/publish" class="primary magnet" id="publish-btn">
+          {% if published %}Подтвердить изменения{% else %}Подтвердить и опубликовать{% endif %} <span class="arr">→</span>
+        </button>
+        <p class="confirm-msg" id="confirm-msg" aria-live="polite"></p>
+      </fieldset>
+    </form>
+  </div>
+
+  <aside class="side">
+    <section class="gauge-card" id="gauge-card">
+      <div class="gauge-top">
+        <span class="k">Предварительный балл</span>
+        <span class="level-badge lvl-{{ rating.level }}">{{ rating.level_label }}</span>
+      </div>
+      {% set from_score = change.before if change else s %}
+      <div class="gauge" style="--from:{{ from_score }}; --to:{{ s }}">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="zone z-draft" cx="100" cy="100" r="96" stroke-dasharray="235.2 603.2" />
+          <circle class="zone z-workable" cx="100" cy="100" r="96" stroke-dasharray="0 241.3 175 603.2" />
+          <circle class="zone z-ready" cx="100" cy="100" r="96" stroke-dasharray="0 422.2 114.6 603.2" />
+          <circle class="zone z-priority" cx="100" cy="100" r="96" stroke-dasharray="0 542.9 56 603.2" />
+          <circle class="track" cx="100" cy="100" r="80" />
+          <circle class="prog" cx="100" cy="100" r="80" />
+        </svg>
+        <div class="gauge-num"><span class="score-big" data-from="{{ from_score }}" data-to="{{ s }}">{{ s }}</span><span class="of">из 100</span></div>
+        {% if change and change.after != change.before %}<span class="delta {% if change.after < change.before %}down{% endif %}">{% if change.after > change.before %}+{% endif %}{{ change.after - change.before }}</span>{% endif %}
+      </div>
+      <div class="mascot-wrap">
+        <div class="mascot" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <ellipse class="eye" cx="16" cy="19" rx="4" ry="5"/><ellipse class="eye" cx="32" cy="19" rx="4" ry="5"/>
+            {% if rating.level == "priority" %}<path class="shades" d="M8 15h32v3c0 4-3 7-7 7s-7-3-7-6h-4c0 3-3 6-7 6s-7-3-7-7z"/>{% endif %}
+            {% if rating.level == "draft" %}<path class="mouth" d="M15 34 Q24 28 33 34"/>{% elif rating.level == "workable" %}<path class="mouth" d="M15 31 Q24 36 33 31"/>{% else %}<path class="mouth" d="M13 29 Q24 41 35 29"/>{% endif %}
+          </svg>
+        </div>
+        <p class="bubble">
+          {% if next_at %}Ещё <b>{{ next_at - s }}</b> {{ "балл" if (next_at - s) % 10 == 1 and (next_at - s) != 11 else ("балла" if (next_at - s) % 10 in [2, 3, 4] and (next_at - s) not in [12, 13, 14] else "баллов") }} — и уровень «{{ next_label }}»!
+          {% else %}Максимальный уровень — задача выделяется в каталоге.{% endif %}
+        </p>
+      </div>
+      <div class="gauge-foot">
+        {% if change %}<span>Было <b class="was">{{ change.before }}</b></span>{% endif %}
+        <span>Подтверждено <b>{% if published %}{{ card.score }}{% else %}—{% endif %}</b></span>
+        {% if published and not card.confirmed %}<span class="unconfirmed">есть неподтверждённые правки</span>{% endif %}
+      </div>
+    </section>
+
+    <section class="metrics">
+      {% for item in rating["items"] %}
+      {% set st = "full" if item.awarded == item.weight else ("zero" if item.awarded == 0 else "half") %}
+      <div class="metric {{ st }}">
+        <span class="metric-name">{{ item.label }}</span><span class="metric-val">{{ item.awarded }}/{{ item.weight }}</span>
+        <span class="mbar"><i style="--p:{{ (item.awarded * 100 / item.weight)|round|int }}%"></i></span>
+      </div>
+      {% endfor %}
+    </section>
 
     {% if rating.missing %}
-    <div class="missing-box">
-      <h3>Что добавить, чтобы поднять рейтинг</h3>
-      <ol class="missing">{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ol>
-    </div>
+    <section class="quests missing-box">
+      <h3>Что добавить: +{{ gain }} {{ "балл" if gain % 10 == 1 and gain != 11 else ("балла" if gain % 10 in [2, 3, 4] and gain not in [12, 13, 14] else "баллов") }} ждут</h3>
+      {% for item in rating["items"]|sort(attribute="weight", reverse=True) if item.hint %}
+      <div class="quest" style="--i:{{ loop.index0 }}">
+        <span class="plus">+{{ item.weight - item.awarded }}</span>
+        <span class="txt"><b>{{ item.label }}.</b> {{ item.hint }}</span>
+        <button type="button" data-go="{{ item_fields[item.key] }}">Заполнить →</button>
+      </div>
+      {% endfor %}
+    </section>
     {% else %}
     <p class="notice info">Все сведения заполнены.</p>
     {% endif %}
-
-    <h3>Уровни готовности</h3>
-    <ul class="legend">
-      <li><span class="level-badge lvl-draft">Черновик</span> 0–39</li>
-      <li><span class="level-badge lvl-workable">Рабочая</span> 40–69</li>
-      <li><span class="level-badge lvl-ready">Готовая</span> 70–89</li>
-      <li><span class="level-badge lvl-priority">Приоритетная</span> 90–100</li>
-    </ul>
   </aside>
 </div>
 {% endblock %}

@@ -220,6 +220,7 @@ def _editor(
             "form_card": form_card or card,
             "rating": rating,
             "field_items": field_items,
+            "item_fields": {key: fields[0] for key, _label, _weight, fields in SCALE},
             "placeholders": FIELD_PLACEHOLDERS,
             "card_fields": CARD_FIELDS,
             "field_labels": FIELD_LABELS,
