@@ -11,3 +11,16 @@ body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 .card { display: block; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; color: inherit; text-decoration: none; }
 .card h2 { margin-top: 0; font-size: 18px; }
 @media (max-width: 640px) { .cards.two { grid-template-columns: 1fr; } }
+.form-stack { display: grid; gap: 16px; max-width: 720px; }
+.form-stack label, fieldset { display: grid; gap: 7px; font-weight: 650; }
+textarea, select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+button { width: fit-content; border: 0; border-radius: 8px; padding: 10px 16px; background: var(--accent); color: white; font: inherit; font-weight: 650; cursor: pointer; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: white; }
+.muted { color: var(--muted); }
+.notice { padding: 12px; border-radius: 8px; }
+.error { color: #8b1e1e; background: #fff1f1; }
+.editor-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
+.rating-panel { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.rating-panel h2 { margin-top: 0; font-size: 18px; }
+.rating-panel ul { padding-left: 18px; }
+@media (max-width: 760px) { .editor-layout { grid-template-columns: 1fr; } }

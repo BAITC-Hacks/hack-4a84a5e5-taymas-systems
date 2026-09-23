@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Task card editor ? AI Sana Challenge Hub{% endblock %}
+{% block content %}
+<h1>Task card editor</h1>
+<p>Review and extend the card. The rating below is preliminary; confirmation happens during the publication step.</p>
+<div class="editor-layout">
+  <form method="post" class="form-stack">
+    {% for field in CARD_FIELDS %}
+    <label>{{ field_labels[field] }}
+      <textarea name="{{ field }}" rows="{% if field in ['context', 'need', 'expected_result'] %}5{% else %}3{% endif %}">{{ card|attr(field) }}</textarea>
+    </label>
+    {% endfor %}
+    <button type="submit">Save changes</button>
+  </form>
+  <aside class="rating-panel">
+    <h2>Preliminary rating: {{ rating.score }} / 100</h2>
+    <p><strong>{{ rating.level_label }}</strong>{% if card.confirmed %} ? confirmed: {{ card.score }}{% endif %}</p>
+    <ul>{% for item in rating.items %}<li>{{ item.label }}: {{ item.awarded }} / {{ item.weight }}{% if item.hint %}<br><span class="muted">{{ item.hint }}</span>{% endif %}</li>{% endfor %}</ul>
+    {% if rating.missing %}<h3>What to add</h3><ul>{% for item in rating.missing %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  </aside>
+</div>
+{% endblock %}
+
