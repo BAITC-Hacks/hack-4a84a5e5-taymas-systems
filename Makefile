@@ -1,4 +1,4 @@
-.PHONY: run check build verify reset dev test
+.PHONY: run check build verify reset dev test gate
 
 # Поднять проект
 run:
@@ -28,3 +28,8 @@ dev:
 # Тесты без Docker
 test:
 	python -m pytest -q
+
+# Приёмка демо-пути: сквозной сценарий кейса от черновика до принятого отклика.
+# Зелёный gate = обязательная демонстрация из раздела 11 кейса работает целиком.
+gate:
+	python -m pytest -q tests/test_e2e.py
