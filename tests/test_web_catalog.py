@@ -197,3 +197,47 @@ def test_decision_is_not_overwritten_and_rejects_garbage(client):
 
 def test_decision_on_unknown_proposal_404(client):
     assert client.post("/proposals/нет/decision", data={"decision": "accept"}).status_code == 404
+
+
+# --- безопасность вывода (HAC-38) ------------------------------------------
+
+XSS = "<script>alert(1)</script>"
+
+
+def test_user_text_is_escaped_everywhere(client):
+    """Весь текст на страницах пользовательский — он обязан выходить экранированным."""
+    # Черновик → страница вопросов и редактор.
+    r = client.post("/business/new", data={"text": f"Хотим бота {XSS}", "industry": "Образование"})
+    assert r.status_code == 200
+    assert XSS not in r.text and "&lt;script&gt;" in r.text
+
+    # Отклик → страница задачи.
+    client.post(
+        "/tasks/c_seed0003/proposals",
+        data={"team_id": "t_seed0001", "idea": f"Идея {XSS}", "plan": f"План {XSS}"},
+        follow_redirects=False,
+    )
+    r = client.get("/tasks/c_seed0003")
+    assert XSS not in r.text and "&lt;script&gt;" in r.text
+
+
+def test_prototype_link_has_noopener(client):
+    client.post(
+        "/tasks/c_seed0003/proposals",
+        data={"team_id": "t_seed0001", "idea": "Идея", "plan": "План", "link": "https://example.kz/p"},
+        follow_redirects=False,
+    )
+    r = client.get("/tasks/c_seed0003")
+    assert 'href="https://example.kz/p" rel="noreferrer noopener"' in r.text
+
+
+def test_no_safe_filter_in_templates():
+    """`|safe` или Markup() отключили бы автоэкранирование молча."""
+    import pathlib
+
+    offenders = [
+        str(p)
+        for p in list(pathlib.Path("app/templates").glob("*.html")) + list(pathlib.Path("app").glob("*.py"))
+        if "|safe" in p.read_text(encoding="utf-8") or "Markup(" in p.read_text(encoding="utf-8")
+    ]
+    assert not offenders, offenders
