@@ -585,3 +585,48 @@ body form.filters { display: inline-flex; width: auto; max-width: 100%; vertical
 body .lead { max-width: 62ch; line-height: 1.6; }
 .value-num { font: 600 13px/1 var(--mono); text-transform: uppercase; letter-spacing: .12em; }
 .value-card strong { font-size: 19px; line-height: 1.25; }
+
+/* ===== Уголок AI-Sana на главной (HAC-55) ===== */
+.sana-corner { position: relative; overflow: hidden; display: grid; gap: 32px; padding: 40px 40px 28px; border-radius: 24px; background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--pop-2) 38%, transparent), transparent 55%), radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%), var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.sana-corner::after { content: "AI·SANA"; position: absolute; right: -10px; bottom: -34px; font: 700 clamp(64px, 12vw, 150px)/1 var(--display); letter-spacing: -.04em; color: var(--text); opacity: .045; pointer-events: none; }
+.sana-head { display: grid; gap: 16px; }
+.sana-tag { justify-self: start; padding: 7px 12px; border-radius: 999px; background: var(--text); color: var(--bg); font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; }
+.sana-head h2 { margin: 0; max-width: 30ch; font-size: clamp(24px, 2.8vw, 34px); line-height: 1.2; }
+.sana-head h2 em { font-style: normal; color: var(--accent); }
+.sana-facts { display: flex; flex-wrap: wrap; gap: 12px 40px; margin-top: 8px; }
+.sana-facts div { display: grid; gap: 6px; }
+.sana-facts b { font: 600 30px/1 var(--mono); letter-spacing: -.02em; }
+.sana-facts span { color: var(--muted); font-size: 13px; }
+.sana-path { position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sana-path::before { content: ""; position: absolute; left: 0; right: 0; top: 17px; height: 2px; background: linear-gradient(90deg, var(--line), var(--accent) 62%, var(--line)); }
+.sana-path li { position: relative; display: grid; gap: 10px; align-content: start; font-size: 14px; font-weight: 700; }
+.sana-path b { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); box-shadow: 0 0 0 4px var(--surface); font: 600 12px/1 var(--mono); color: var(--muted); }
+.sana-path li.here b { background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 4px var(--surface), 0 0 0 9px var(--glow); animation: sana-pulse 2.4s ease-in-out infinite; }
+.sana-path li.here em { font-style: normal; font-weight: 600; font-size: 12px; color: var(--accent); line-height: 1.4; }
+@keyframes sana-pulse { 50% { box-shadow: 0 0 0 4px var(--surface), 0 0 0 14px transparent; } }
+.sana-src { margin: 0; font-size: 11px; color: var(--muted); }
+@media (max-width: 720px) { .sana-corner { padding: 28px 20px 22px; } .sana-path { grid-template-columns: 1fr 1fr; } .sana-path::before { display: none; } }
+@media (prefers-reduced-motion: reduce) { .sana-path li.here b { animation: none; } }
+
+/* ===== Страница задачи: рейтинг плитками, подсказки и пустые состояния (HAC-55) ===== */
+body table.rating-table, body .rating-table tbody, body .rating-table tfoot { display: block; background: none; box-shadow: none; border: 0; }
+body .rating-table thead { display: none; }
+body .rating-table tbody { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+body .rating-table tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-content: start; padding: 18px 20px; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); transition: transform .3s var(--spring), box-shadow .3s; }
+body .rating-table tbody tr:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px var(--accent); }
+body .rating-table td, body .rating-table th { display: block; padding: 0; border: 0; background: none; }
+body .rating-table tbody td:first-child { font: 700 15px/1.3 var(--display); }
+body .rating-table tbody td.num { font: 600 14px/1.3 var(--mono); color: var(--accent); white-space: nowrap; }
+body .rating-table tbody td.hint { grid-column: 1 / -1; font-size: 13px; line-height: 1.5; color: var(--muted); padding-top: 10px; border-top: 1px dashed var(--line); }
+body .rating-table tfoot { margin-top: 12px; }
+body .rating-table tfoot tr { display: flex; align-items: center; gap: 16px; padding: 18px 22px; border-radius: var(--r-m); background: var(--accent); color: var(--accent-ink); }
+body .rating-table tfoot th { color: inherit; background: none; font: 700 15px/1 var(--display); }
+body .rating-table tfoot th.num { font: 600 22px/1 var(--mono); margin-left: auto; }
+body .rating-table tfoot th:last-child { padding: 6px 12px; border-radius: 999px; background: var(--accent-ink); color: var(--accent); font-size: 12px; }
+/* Список «Не хватает сведений» повторяет подсказки плиток выше — на экране не дублируем */
+body p.missing, body ul.missing-list { display: none; }
+
+body .task-head ~ section p.note { position: relative; max-width: 72ch; margin: 14px 0 0; padding: 14px 16px 14px 46px; border-radius: var(--r-m); background: color-mix(in srgb, var(--pop-2) 10%, var(--surface)); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; line-height: 1.55; }
+body .task-head ~ section p.note::before { content: "i"; position: absolute; left: 14px; top: 13px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--pop-2); color: #fff; font: 700 12px/1 var(--mono); }
+body .task-head ~ section p.empty { display: flex; align-items: center; gap: 14px; padding: 22px 24px; background: transparent; box-shadow: none; border: 2px dashed var(--line); border-radius: var(--r-m); color: var(--muted); font-weight: 600; }
+body .task-head ~ section p.empty::before { content: "✦"; display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); color: var(--accent); font-size: 18px; animation: pulse 2.4s ease-in-out infinite; }
