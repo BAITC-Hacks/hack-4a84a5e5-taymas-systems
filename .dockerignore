@@ -23,3 +23,6 @@ docs
 *.pdf
 Makefile
 docker-compose.yml
+
+# Локальное состояние не должно попасть в образ: сид читается при первом старте
+data/store.json
