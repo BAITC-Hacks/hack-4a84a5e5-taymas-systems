@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Clarifying questions ? AI Sana Challenge Hub{% endblock %}
+{% block title %}Уточняющие вопросы · AI Sana Challenge Hub{% endblock %}
 {% block content %}
-<h1>Clarify the task</h1>
-<p class="muted">Draft: {{ draft.text }}</p>
+<h1>Уточните задачу</h1>
+<p class="muted">Черновик: {{ draft.text }}</p>
+<p class="muted">На любой вопрос можно не отвечать — недостающее потом дополните в редакторе карточки.</p>
 <form method="post" action="/business/drafts/{{ draft.id }}/answers" class="form-stack">
   {% for question in draft.questions %}
   <fieldset>
     <legend>{{ loop.index }}. {{ question.question }}</legend>
-    {% if question.why %}<p class="muted">Why: {{ question.why }}</p>{% endif %}
-    <textarea name="answer_{{ loop.index0 }}" rows="4" placeholder="Your answer"></textarea>
+    {% if question.why %}<p class="muted">Зачем: {{ question.why }}</p>{% endif %}
+    <textarea name="answer_{{ loop.index0 }}" rows="4" placeholder="Ваш ответ"></textarea>
   </fieldset>
   {% endfor %}
-  <button type="submit">Create task card</button>
+  <button type="submit">Собрать карточку</button>
 </form>
 {% endblock %}
-
