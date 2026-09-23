@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="home-hero">
-  <span class="eyebrow">AI Sana · бизнес-задачи для студенческих команд</span>
+  <span class="eyebrow">AI Sana · задачи бизнеса для студенческих команд</span>
   <h1>От сырой идеи до <em>готовой задачи</em>, которую хотят решать</h1>
-  <p class="lede">Бизнес описывает задачу как умеет — ИИ-агент задаёт уточняющие вопросы и собирает карточку с рейтингом готовности.</p>
+  <p class="lede">Бизнес пишет пару фраз — ИИ-агент доводит их до карточки с рейтингом готовности.</p>
   <div class="hero-actions">
     <button type="button" class="btn-ghost" data-open="tour">Как это работает · 1 минута</button>
     <button type="button" class="btn-link" data-open="rating-help">Как считается рейтинг</button>
@@ -30,42 +30,41 @@
 
 <div class="entry-grid">
   <a class="entry entry-business tilt" href="/business/new">
-    <span class="entry-kicker">Я представитель бизнеса</span>
+    <span class="entry-kicker">Для бизнеса</span>
     <span class="entry-title">Разместить задачу</span>
-    <span class="entry-text">Опишите задачу в свободной форме — дальше система задаст уточняющие вопросы.</span>
+    <span class="entry-text">Опишите задачу своими словами — остальное спросит агент.</span>
     <span class="entry-go">Начать →</span>
   </a>
   <a class="entry entry-team tilt" href="/catalog">
-    <span class="entry-kicker">Я студенческая команда</span>
+    <span class="entry-kicker">Для студенческих команд</span>
     <span class="entry-title">Выбрать задачу</span>
     <span class="entry-stats"><b>{{ published }}</b> опубликовано · <b>{{ teams }}</b> команд</span>
     <span class="entry-go">В каталог →</span>
   </a>
 </div>
 
-<section class="agent-demo">
+<section class="home-section agent-demo">
   <div class="agent-about">
     <span class="eyebrow">ИИ-агент внутри</span>
-    <h2>Агент не пишет за бизнес — он находит, <em>чего не хватает</em></h2>
+    <h2>Не пишет за бизнес — находит, <em>чего не хватает</em></h2>
     <ul class="skills">
-      <li><b>01</b> Читает черновик и находит пробелы: срок, данные, критерий успеха</li>
-      <li><b>02</b> Задаёт уточняющие вопросы только о пропущенном</li>
-      <li><b>03</b> Собирает карточку задачи из ответов</li>
-      <li><b>04</b> Считает рейтинг готовности по 7 показателям и объясняет каждый балл</li>
-      <li><b>05</b> Подбирает задачи под команду и проверяет задачу виртуальной командой</li>
+      <li><b>01</b><span>Находит пробелы в черновике</span></li>
+      <li><b>02</b><span>Спрашивает только о пропущенном</span></li>
+      <li><b>03</b><span>Собирает карточку из ответов</span></li>
+      <li><b>04</b><span>Проверяет задачу виртуальной командой</span></li>
     </ul>
   </div>
   <div class="console" aria-label="Пример работы агента">
     <div class="console-bar"><i></i><i></i><i></i><span>agent · пример запуска</span></div>
     <ol class="console-log">
-      <li class="c-in">черновик: «Нужен чат-бот, чтобы клиенты сами записывались в салон»</li>
+      <li class="c-in">черновик: «Нужен чат-бот для записи в салон»</li>
       <li class="c-agent">читаю черновик · отрасль «Услуги»</li>
-      <li class="c-warn">пробелы: нет срока · нет данных · нет критерия успеха</li>
-      <li class="c-ask">вопрос: какие данные о записях у вас уже есть?</li>
-      <li class="c-ask">вопрос: по какому показателю поймёте, что задача решена?</li>
-      <li class="c-ok">карточка собрана · 7 показателей рейтинга</li>
-      <li class="c-up">рейтинг 34 → 78 · уровень «Готовая»</li>
-      <li class="c-ok">опубликовано в каталоге · бизнес ждёт отклики команд</li>
+      <li class="c-warn">пробелы: срок · данные · критерий успеха</li>
+      <li class="c-ask">какие данные о записях уже есть?</li>
+      <li class="c-ask">как поймёте, что задача решена?</li>
+      <li class="c-ok">карточка собрана · 7 показателей</li>
+      <li class="c-up">рейтинг 34 → 78 · «Готовая»</li>
+      <li class="c-ok">опубликовано в каталоге</li>
     </ol>
   </div>
 </section>
@@ -78,18 +77,25 @@
   </div>
 </div>
 
-<ol class="journey">
-  <li><b>1</b><span>Черновик</span><small>пара фраз своими словами</small></li>
-  <li><b>2</b><span>Вопросы</span><small>ИИ спрашивает о пробелах</small></li>
-  <li><b>3</b><span>Карточка</span><small>рейтинг 0–100 с расшифровкой</small></li>
-  <li><b>4</b><span>Подтверждение</span><small>баллы засчитываются</small></li>
-  <li><b>5</b><span>Каталог</span><small>команды откликаются, бизнес выбирает</small></li>
-</ol>
+<section class="home-section">
+  <div class="section-head">
+    <span class="eyebrow">Путь задачи</span>
+    <h2>Пять шагов до откликов команд</h2>
+  </div>
+  <ol class="journey">
+    <li><b>01</b><span>Черновик</span><small>пара фраз своими словами</small></li>
+    <li><b>02</b><span>Вопросы</span><small>агент спрашивает о пробелах</small></li>
+    <li><b>03</b><span>Карточка</span><small>рейтинг 0–100 с расшифровкой</small></li>
+    <li><b>04</b><span>Подтверждение</span><small>баллы засчитываются</small></li>
+    <li><b>05</b><span>Каталог</span><small>бизнес выбирает команду</small></li>
+  </ol>
+</section>
 
-<section id="live-feed" class="live-feed" aria-live="polite"></section>
-
-<details class="more rule-note">
-  <summary>Почему рейтингу можно верить</summary>
-  <p>Рейтинг готовности (0–100) учитывает только заполненные поля, <strong>подтверждённые бизнесом</strong>: после каждого подтверждённого дополнения балл пересчитывается и задача занимает новое место в каталоге. Считает его сервер по одинаковым правилам — ИИ баллы не выставляет.</p>
-</details>
+<div class="home-section home-bottom">
+  <section id="live-feed" class="live-feed" aria-live="polite"></section>
+  <details class="more rule-note">
+    <summary>Почему рейтингу можно верить</summary>
+    <p>Рейтинг готовности (0–100) учитывает только заполненные поля, <strong>подтверждённые бизнесом</strong>. После каждого подтверждённого дополнения балл пересчитывается, и задача занимает новое место в каталоге. Считает его сервер по одинаковым правилам — ИИ баллы не выставляет.</p>
+  </details>
+</div>
 {% endblock %}

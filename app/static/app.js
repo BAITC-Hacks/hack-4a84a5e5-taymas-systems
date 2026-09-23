@@ -230,7 +230,7 @@
     const run = async () => {
       const wait = ms => new Promise(r => setTimeout(r, ms));
       for (;;) {
-        lines.forEach(li => { li.classList.add("later"); li.textContent = ""; });
+        lines.forEach(li => li.classList.add("later"));  // скрытые строки держат высоту, окно не прыгает
         for (let i = 0; i < lines.length; i++) {
           const li = lines[i];
           li.classList.remove("later"); li.classList.add("typing");

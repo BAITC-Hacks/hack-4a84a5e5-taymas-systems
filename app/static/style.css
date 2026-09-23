@@ -481,3 +481,40 @@ details.more.lede-more { margin: 0 0 20px; }
 .tour-count { font: 500 13px/1 var(--mono); color: var(--muted); }
 @media (max-width: 520px) { .scale-list li { grid-template-columns: 1fr 60px 24px; } .modal { padding: 22px 18px; } }
 button:disabled { opacity: .4; cursor: default; transform: none; box-shadow: none; }
+
+/* ===== Главная: ритм и воздух (HAC-55) ===== */
+.home-hero { padding: 40px 0 12px; }
+.home-hero h1 { max-width: 16ch; margin: 20px 0 18px; }
+.home-hero .lede { max-width: 46ch; font-size: 18px; line-height: 1.55; margin-bottom: 28px; }
+.entry-grid { margin: 48px 0 0; gap: 20px; }
+.entry { padding: 28px 30px; gap: 12px; }
+.home-section { margin-top: 88px; }
+.section-head { display: grid; gap: 12px; margin-bottom: 28px; }
+.section-head h2, .agent-about h2 { margin: 0; font-size: clamp(24px, 2.6vw, 32px); line-height: 1.2; max-width: 22ch; }
+.agent-demo { gap: 56px; align-items: center; }
+.agent-about { display: grid; gap: 18px; align-content: start; }
+.skills { gap: 4px; margin-top: 10px; }
+.skills li { gap: 16px; padding: 14px 0; border-radius: 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+.skills li:hover { background: none; transform: translateX(6px); }
+.skills li:hover b { color: var(--text); }
+.skills b { flex: none; width: 24px; overflow-wrap: normal; }
+.console { min-height: 0; }
+.console-log { padding: 22px 22px 26px; gap: 12px; }
+.ticker { margin: 88px 0 0; }
+.journey { gap: 16px; }
+.journey li { padding: 22px 20px; gap: 6px; }
+.journey b { margin-bottom: 14px; }
+.home-bottom { display: grid; gap: 20px; }
+body .live-feed:not(:empty) { margin: 0; padding: 26px 28px; border: 0; box-shadow: inset 0 0 0 1px var(--line); max-width: 860px; }
+body .live-feed h2 { margin: 0 0 18px; font-size: 20px; }
+body .live-feed ol { gap: 0; }
+body .live-feed li { gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+body .live-feed li:last-child { border-bottom: 0; }
+body .live-feed li:nth-child(n+6) { display: none; }
+body .live-feed time { font-family: var(--mono); min-width: 88px; }
+.home-bottom details.more { max-width: 860px; }
+details.more > p { line-height: 1.6; }
+@media (max-width: 860px) { .agent-demo { gap: 32px; } .home-section, .ticker { margin-top: 56px; } }
+.tour-steps b, .skills b, .journey b, .quest .plus, .console-log li::before { flex: none; white-space: nowrap; overflow-wrap: normal; }
+.tour-steps b { width: 24px; }
+.home-hero h1 { max-width: 20ch; }
