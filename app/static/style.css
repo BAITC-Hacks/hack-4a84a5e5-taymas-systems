@@ -353,3 +353,19 @@ body .rating-table th, body .rating-table td { border-bottom: 1px solid var(--li
 body .rating-table thead th, body .rating-table tfoot th { background: var(--surface-2); color: var(--text); }
 body .proposal.status-accepted { box-shadow: inset 4px 0 0 var(--good), inset 0 0 0 1px var(--line); border: 0; }
 body .edit-link { display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 800; text-decoration: none; }
+
+/* ===== Выпадающие списки поверх <select> (HAC-55) ===== */
+.dd { position: relative; }
+.dd-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+body .dd-btn { position: relative; width: 100%; display: block; padding: 12px 42px 12px 14px; border-radius: var(--r-s); background: var(--field); color: var(--text); font: 500 15px/1.4 var(--body); text-align: left; box-shadow: inset 0 0 0 1px var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: box-shadow .2s; }
+body .dd-btn:hover { transform: none; box-shadow: inset 0 0 0 1px var(--muted); }
+body .dd-btn:focus-visible, .dd.open .dd-btn { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.dd-btn.placeholder { color: var(--muted); }
+.dd-btn::after { content: ""; position: absolute; right: 16px; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-70%) rotate(45deg); transition: transform .25s var(--ease); }
+.dd.open .dd-btn::after { transform: translateY(-30%) rotate(-135deg); border-color: var(--accent); }
+.dd-list { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none; max-height: 300px; overflow-y: auto; border-radius: var(--r-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 18px 44px rgba(0, 0, 0, .28); animation: dd-in .18s var(--ease); }
+.dd-list li { padding: 10px 12px; border-radius: 8px; font: 500 14px/1.4 var(--body); cursor: pointer; }
+.dd-list li:hover, .dd-list li:focus { outline: none; background: var(--surface-2); }
+.dd-list li[aria-selected="true"] { color: var(--accent); font-weight: 700; }
+.dd-list li[aria-selected="true"]::before { content: "✓ "; }
+@keyframes dd-in { from { opacity: 0; transform: translateY(-4px); } }

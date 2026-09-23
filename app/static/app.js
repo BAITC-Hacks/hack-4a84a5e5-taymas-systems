@@ -118,3 +118,95 @@
     }
   });
 })();
+
+// Выпадающие списки в стиле сайта поверх обычного <select>.
+// Сам <select> остаётся в форме и отправляет значение; без JS работает как раньше.
+(() => {
+  let open = null;
+  const close = (dd, focusBtn) => {
+    if (!dd) return;
+    dd.list.hidden = true;
+    dd.btn.setAttribute("aria-expanded", "false");
+    dd.box.classList.remove("open");
+    if (focusBtn) dd.btn.focus();
+    if (open === dd) open = null;
+  };
+
+  document.querySelectorAll("select:not([multiple])").forEach((select, n) => {
+    const box = document.createElement("div");
+    box.className = "dd";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dd-btn" + (select.classList.contains("invalid") ? " invalid" : "");
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    const list = document.createElement("ul");
+    list.className = "dd-list";
+    list.id = `dd-list-${n}`;
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    btn.setAttribute("aria-controls", list.id);
+
+    const items = [...select.options].map((opt, i) => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.tabIndex = -1;
+      li.textContent = opt.textContent.trim();
+      li.dataset.index = i;
+      list.appendChild(li);
+      return li;
+    });
+
+    const dd = { box, btn, list };
+    const sync = () => {
+      const opt = select.options[select.selectedIndex];
+      btn.textContent = opt ? opt.textContent.trim() : "";
+      btn.classList.toggle("placeholder", !!opt && opt.value === "");
+      items.forEach((li, i) => li.setAttribute("aria-selected", String(i === select.selectedIndex)));
+    };
+    const choose = i => {
+      if (select.selectedIndex !== i) {
+        select.selectedIndex = i;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      sync();
+      close(dd, true);
+    };
+    const openList = () => {
+      if (open && open !== dd) close(open);
+      list.hidden = false;
+      box.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+      open = dd;
+      (items[select.selectedIndex] || items[0])?.focus();
+    };
+
+    btn.addEventListener("click", () => (list.hidden ? openList() : close(dd, true)));
+    btn.addEventListener("keydown", e => {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) { e.preventDefault(); openList(); }
+    });
+    // preventDefault: список лежит внутри <label>, иначе клик по пункту снова «нажмёт» кнопку.
+    list.addEventListener("click", e => { e.preventDefault(); const li = e.target.closest("li"); if (li) choose(+li.dataset.index); });
+    list.addEventListener("keydown", e => {
+      const i = items.indexOf(document.activeElement);
+      const move = j => items[Math.max(0, Math.min(items.length - 1, j))].focus();
+      if (e.key === "ArrowDown") { e.preventDefault(); move(i + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); move(i - 1); }
+      else if (e.key === "Home") { e.preventDefault(); move(0); }
+      else if (e.key === "End") { e.preventDefault(); move(items.length - 1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (i >= 0) choose(i); }
+      else if (e.key === "Escape") { e.preventDefault(); close(dd, true); }
+      else if (e.key === "Tab") close(dd);
+    });
+
+    select.classList.add("dd-native");
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden", "true");
+    select.parentNode.insertBefore(box, select);
+    box.append(btn, list, select);
+    select.addEventListener("change", sync);
+    sync();
+  });
+
+  document.addEventListener("click", e => { if (open && !open.box.contains(e.target)) close(open); });
+})();
