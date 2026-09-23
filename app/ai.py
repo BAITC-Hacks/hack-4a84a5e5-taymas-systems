@@ -111,6 +111,14 @@ def generate_questions(draft_text: str, industry: str) -> list[Question]:
         logger.warning("LLM недоступен для генерации вопросов, включена заглушка: %s", exc)
         _set_fallback_reason(f"Вопросы: LLM недоступен, использована заглушка ({exc})")
         return _stub_questions(preliminary, industry)
+    except Exception as exc:  # noqa: BLE001
+        # Граница слоя: наружу исключение уйти не должно никогда. Обёртка переводит
+        # ошибки провайдера в LLMResponseError, но SDK и его транспорт могут бросить
+        # что-то своё — например, UnicodeEncodeError, если в ключе оказались не-ASCII
+        # символы. Для пользователя это обязано выглядеть как работа заглушки, а не 500.
+        logger.exception("Непредвиденная ошибка LLM при генерации вопросов, включена заглушка")
+        _set_fallback_reason(f"Вопросы: непредвиденная ошибка LLM, использована заглушка ({type(exc).__name__})")
+        return _stub_questions(preliminary, industry)
 
     if questions is not None:
         _set_fallback_reason(None)
@@ -132,6 +140,10 @@ def build_card(draft_text: str, industry: str, answers: list[Answer]) -> CardFie
     except (LLMConfigError, LLMResponseError) as exc:
         logger.warning("LLM недоступен для сборки карточки, использую заглушку: %s", exc)
         _set_fallback_reason(f"Карточка: LLM недоступен, использована заглушка ({exc})")
+        return stub
+    except Exception as exc:  # noqa: BLE001 — см. комментарий в generate_questions
+        logger.exception("Непредвиденная ошибка LLM при сборке карточки, использую заглушку")
+        _set_fallback_reason(f"Карточка: непредвиденная ошибка LLM, использована заглушка ({type(exc).__name__})")
         return stub
 
     _set_fallback_reason(None)

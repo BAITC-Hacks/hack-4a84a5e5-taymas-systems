@@ -418,3 +418,32 @@ def test_stub_questions_cover_distinct_fields_for_any_input(monkeypatch):
         fields = [q.field for q in questions]
         assert len(set(fields)) == len(fields), fields
         assert all(q.question.strip() for q in questions)
+
+
+def test_unexpected_llm_exception_never_escapes(monkeypatch):
+    """Граница слоя: любая ошибка SDK выглядит для пользователя как работа заглушки, а не 500.
+
+    Обёртка переводит ошибки провайдера в LLMResponseError, но транспорт может бросить
+    своё — например, UnicodeEncodeError, если в ключе оказались не-ASCII символы.
+    """
+    import app.ai as ai_module
+    from app.models import Answer
+
+    def boom(*_args, **_kwargs):
+        raise UnicodeEncodeError("ascii", "ключ", 0, 1, "ordinal not in range(128)")
+
+    monkeypatch.setattr(ai_module, "llm_available", lambda: True)
+    monkeypatch.setattr(ai_module, "_llm_questions", boom)
+    monkeypatch.setattr(ai_module, "_llm_card", boom)
+
+    questions = ai_module.generate_questions("Хотим чат-бота для студентов", "Образование")
+    assert len(questions) >= 3
+    assert "непредвиденная ошибка" in (ai_module.last_fallback_reason or "")
+
+    card = ai_module.build_card(
+        "Хотим чат-бота для студентов",
+        "Образование",
+        [Answer(field="data", question="Какие данные?", answer="FAQ на 120 вопросов в Google Docs.")],
+    )
+    assert card.data
+    assert "непредвиденная ошибка" in (ai_module.last_fallback_reason or "")
